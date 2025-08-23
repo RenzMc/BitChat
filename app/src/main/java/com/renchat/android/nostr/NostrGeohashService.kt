@@ -10,7 +10,7 @@ import com.renchat.android.ui.ChatState
 import com.renchat.android.ui.MessageManager
 import com.renchat.android.ui.MeshDelegateHandler
 import com.renchat.android.ui.PrivateChatManager
-import com.renchat.android.ui.GeoPerson
+import com.renchat.android.model.GeoPerson
 //import com.renchat.android.ui.colorForPeerSeed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

@@ -88,6 +88,21 @@ fun formatMessageAsAnnotatedString(
 }
 
 /**
+ * Split display name into base name and suffix parts
+ * Format: "nickname#abcd" -> ("nickname", "#abcd")
+ */
+fun splitSuffix(displayName: String): Pair<String, String> {
+    val lastHashIndex = displayName.lastIndexOf('#')
+    return if (lastHashIndex != -1) {
+        val baseName = displayName.substring(0, lastHashIndex)
+        val suffix = displayName.substring(lastHashIndex)
+        baseName to suffix
+    } else {
+        displayName to ""
+    }
+}
+
+/**
  * Append formatted content with hashtag and mention highlighting
  */
 private fun appendFormattedContent(

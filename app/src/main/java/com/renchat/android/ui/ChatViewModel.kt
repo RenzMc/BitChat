@@ -688,6 +688,13 @@ class ChatViewModel(
     }
     
     /**
+     * Get consistent color for a Nostr pubkey (iOS-compatible)
+     */
+    fun colorForNostrPubkey(pubkeyHex: String, isDark: Boolean): androidx.compose.ui.graphics.Color {
+        return nostrGeohashService.colorForNostrPubkey(pubkeyHex, isDark)
+    }
+    
+    /**
      * Load geohash blocked users from DataManager
      */
     private fun loadGeohashBlockedUsers() {
