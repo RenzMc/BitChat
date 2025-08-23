@@ -152,7 +152,7 @@ class ChatLockManager(
      * Refresh the locked chats state from persistent storage
      */
     private fun refreshLockedChatsState() {
-        val lockedChatIds = dataManager.getLockedChats()
+        val lockedChatIds = dataManager.lockedChats
         _lockedChats.postValue(lockedChatIds)
         Log.d(TAG, "Refreshed locked chats state: $lockedChatIds")
     }
@@ -171,6 +171,6 @@ class ChatLockManager(
      * Get all locked chat IDs
      */
     fun getLockedChats(): Set<String> {
-        return dataManager.getLockedChats()
+        return dataManager.lockedChats
     }
 }

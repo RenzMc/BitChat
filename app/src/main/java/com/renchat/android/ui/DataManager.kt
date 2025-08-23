@@ -253,9 +253,6 @@ class DataManager(private val context: Context) {
         return result
     }
     
-    fun getLockedChats(): Set<String> {
-        return _lockedChats.toSet()
-    }
     
     fun clearAllChatLocks() {
         _lockedChats.clear()
