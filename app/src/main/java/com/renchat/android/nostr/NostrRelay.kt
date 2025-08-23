@@ -129,6 +129,19 @@ class NostrRelay(
         }
     }
     
+    fun publishEvent(event: NostrEvent) {
+        if (_isConnected.value) {
+            val eventMessage = JSONArray().apply {
+                put("EVENT")
+                put(event.toJson())
+            }
+            sendMessage(eventMessage.toString())
+            Log.d(TAG, "Published event: ${event.id}")
+        } else {
+            Log.w(TAG, "Cannot publish event - not connected")
+        }
+    }
+    
     private fun parseRelayUrl(url: String): Triple<String, Int, Boolean> {
         val cleanUrl = url.removePrefix("ws://").removePrefix("wss://")
         val useSSL = url.startsWith("wss://")
@@ -197,7 +210,7 @@ class NostrRelay(
                     if (jsonArray.length() >= 3) {
                         val subscriptionId = jsonArray.getString(1)
                         val eventJson = jsonArray.getJSONObject(2)
-                        val event = NostrEvent.fromJson(eventJson)
+                        val event = NostrEventRelay.fromJson(eventJson)
                         
                         // Deduplicate events
                         if (!seenEvents.contains(event.id)) {
@@ -314,40 +327,3 @@ data class NostrEventRelay(
     }
 }
 
-/**
- * Nostr subscription filter
- */
-data class NostrFilter(
-    val ids: List<String>? = null,
-    val authors: List<String>? = null,
-    val kinds: List<Int>? = null,
-    val since: Long? = null,
-    val until: Long? = null,
-    val limit: Int? = null,
-    val tags: Map<String, List<String>>? = null
-) {
-    fun toJson(): JSONObject {
-        val json = JSONObject()
-        
-        ids?.let { json.put("ids", JSONArray(it)) }
-        authors?.let { json.put("authors", JSONArray(it)) }
-        kinds?.let { json.put("kinds", JSONArray(it)) }
-        since?.let { json.put("since", it) }
-        until?.let { json.put("until", it) }
-        limit?.let { json.put("limit", it) }
-        
-        tags?.forEach { (key, values) ->
-            json.put("#$key", JSONArray(values))
-        }
-        
-        return json
-    }
-}
-
-/**
- * Nostr subscription
- */
-data class NostrSubscription(
-    val id: String,
-    val filter: NostrFilter
-)

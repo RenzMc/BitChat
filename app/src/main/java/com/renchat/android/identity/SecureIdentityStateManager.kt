@@ -360,4 +360,15 @@ class SecureIdentityStateManager(private val context: Context) {
     fun getSecureValue(key: String): String? {
         return prefs.getString(key, null)
     }
+    
+    /**
+     * Clear multiple secure values from encrypted preferences
+     */
+    fun clearSecureValues(vararg keys: String) {
+        val editor = prefs.edit()
+        keys.forEach { key ->
+            editor.remove(key)
+        }
+        editor.apply()
+    }
 }

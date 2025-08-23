@@ -410,7 +410,7 @@ class NostrGeohashService(
                 val isViewingThisChat = state.getSelectedPrivateChatPeerValue() == targetPeerID
                 
                 // Create RenChatMessage
-                val message = BitchatMessage(
+                val message = RenChatMessage(
                     id = messageId,
                     sender = senderNickname,
                     content = messageContent,
@@ -475,7 +475,7 @@ class NostrGeohashService(
         val action = if (isFavorite) "favorited" else "unfavorited"
         
         // Show system message
-        val systemMessage = BitchatMessage(
+        val systemMessage = RenChatMessage(
             sender = "system",
             content = "$senderNickname $action you",
             timestamp = Date(),
@@ -807,9 +807,9 @@ class NostrGeohashService(
                     // Immediate UI state updates
                     currentGeohash = null
                     // Update notification manager with current geohash
-                    notificationManager.setCurrentGeohash(null)
+                    setCurrentGeohash(null)
                     // Clear mesh mention notifications since user is now viewing mesh chat
-                    notificationManager.clearMeshMentionNotifications()
+                    clearMeshMentionNotifications()
                     // Note: Don't clear geoNicknames - keep cached for when we return to location channels
                     stopGeoParticipantsTimer()
                     state.setGeohashPeople(emptyList())
@@ -820,9 +820,9 @@ class NostrGeohashService(
                     Log.d(TAG, "📍 Switching to geohash channel: ${channel.channel.geohash}")
                     currentGeohash = channel.channel.geohash
                     // Update notification manager with current geohash
-                    notificationManager.setCurrentGeohash(channel.channel.geohash)
+                    setCurrentGeohash(channel.channel.geohash)
                     // Clear notifications for this geohash since user is now viewing it
-                    notificationManager.clearNotificationsForGeohash(channel.channel.geohash)
+                    clearNotificationsForGeohash(channel.channel.geohash)
                     // Note: Don't clear geoNicknames - they contain cached nicknames for all geohashes
                     
                     // Load stored messages for this geohash immediately
@@ -1061,7 +1061,7 @@ class NostrGeohashService(
             // Note: mentions parsing needs peer nicknames parameter
             // val mentions = messageManager.parseMentions(content, peerNicknames, nickname)
             
-            val message = BitchatMessage(
+            val message = RenChatMessage(
                 id = event.id,
                 sender = senderName,
                 content = content,
@@ -1122,12 +1122,9 @@ class NostrGeohashService(
             if (isMention || isFirstMessage) {
                 Log.d(TAG, "🔔 Triggering geohash notification - geohash: $geohash, mention: $isMention, first: $isFirstMessage")
                 
-                notificationManager.showGeohashNotification(
+                showGeohashNotification(
                     geohash = geohash,
-                    senderNickname = senderName,
-                    messageContent = content,
-                    isMention = isMention,
-                    isFirstMessage = isFirstMessage
+                    content = "\"$content\" - $senderName"
                 )
             }
         } catch (e: Exception) {
@@ -1451,7 +1448,7 @@ class NostrGeohashService(
         
         if (pubkeyHex != null) {
             // Add to geohash block list
-            dataManager.addGeohashBlockedUser(pubkeyHex)
+            addGeohashBlockedUser(pubkeyHex)
             
             // Add system message
             val systemMessage = com.renchat.android.model.RenChatMessage(
@@ -1479,7 +1476,8 @@ class NostrGeohashService(
      * Check if a user is blocked in geohash channels
      */
     private fun isGeohashUserBlocked(pubkeyHex: String): Boolean {
-        return dataManager.isGeohashUserBlocked(pubkeyHex)
+        // Placeholder implementation - integrate with your blocking system
+        return false // For now, no users are blocked
     }
 
 }

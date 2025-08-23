@@ -128,7 +128,7 @@ class NostrChannelManager(private val context: Context) {
         val message = RenChatMessage(
             sender = extractNickname(event) ?: event.pubkey.take(8),
             content = event.content,
-            timestamp = Date(event.createdAt * 1000),
+            timestamp = Date(event.created_at * 1000),
             isRelay = false,
             senderPeerID = event.pubkey,
             channel = getCurrentGeohash()

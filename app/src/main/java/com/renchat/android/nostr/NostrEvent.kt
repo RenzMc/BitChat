@@ -149,6 +149,29 @@ data class NostrEvent(
     }
     
     /**
+     * Convert to JSON object (for compatibility with NostrEventRelay)
+     */
+    fun toJson(): org.json.JSONObject {
+        val json = org.json.JSONObject()
+        json.put("id", id)
+        json.put("pubkey", pubkey)
+        json.put("created_at", createdAt)
+        json.put("kind", kind)
+        json.put("content", content)
+        json.put("sig", sig ?: "")
+        
+        val tagsArray = org.json.JSONArray()
+        tags.forEach { tag ->
+            val tagArray = org.json.JSONArray()
+            tag.forEach { tagArray.put(it) }
+            tagsArray.put(tagArray)
+        }
+        json.put("tags", tagsArray)
+        
+        return json
+    }
+    
+    /**
      * Convert to JSON string
      */
     fun toJsonString(): String {
