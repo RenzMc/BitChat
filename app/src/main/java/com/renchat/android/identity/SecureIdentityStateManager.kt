@@ -346,4 +346,18 @@ class SecureIdentityStateManager(private val context: Context) {
     fun hasIdentityData(): Boolean {
         return prefs.contains(KEY_STATIC_PRIVATE_KEY) && prefs.contains(KEY_STATIC_PUBLIC_KEY)
     }
+    
+    /**
+     * Store secure value in encrypted preferences
+     */
+    fun storeSecureValue(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+    }
+    
+    /**
+     * Get secure value from encrypted preferences
+     */
+    fun getSecureValue(key: String): String? {
+        return prefs.getString(key, null)
+    }
 }

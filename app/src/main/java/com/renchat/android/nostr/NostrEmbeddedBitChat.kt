@@ -4,7 +4,7 @@ import android.util.Base64
 import android.util.Log
 import com.renchat.android.model.PrivateMessagePacket
 import com.renchat.android.model.NoisePayloadType
-import com.renchat.android.protocol.BitchatPacket
+import com.renchat.android.protocol.RenChatPacket
 import com.renchat.android.protocol.MessageType
 import java.util.*
 
@@ -38,7 +38,7 @@ object NostrEmbeddedBitChat {
             // Determine 8-byte recipient ID to embed
             val recipientIDHex = normalizeRecipientPeerID(recipientPeerID)
             
-            val packet = BitchatPacket(
+            val packet = RenChatPacket(
                 version = 1u,
                 type = MessageType.NOISE_ENCRYPTED.value,
                 senderID = hexStringToByteArray(senderPeerID),
@@ -78,7 +78,7 @@ object NostrEmbeddedBitChat {
             
             val recipientIDHex = normalizeRecipientPeerID(recipientPeerID)
             
-            val packet = BitchatPacket(
+            val packet = RenChatPacket(
                 version = 1u,
                 type = MessageType.NOISE_ENCRYPTED.value,
                 senderID = hexStringToByteArray(senderPeerID),
@@ -115,7 +115,7 @@ object NostrEmbeddedBitChat {
             val messageIDBytes = messageID.toByteArray(Charsets.UTF_8)
             System.arraycopy(messageIDBytes, 0, payload, 1, messageIDBytes.size)
             
-            val packet = BitchatPacket(
+            val packet = RenChatPacket(
                 version = 1u,
                 type = MessageType.NOISE_ENCRYPTED.value,
                 senderID = hexStringToByteArray(senderPeerID),
@@ -150,7 +150,7 @@ object NostrEmbeddedBitChat {
             payload[0] = NoisePayloadType.PRIVATE_MESSAGE.value.toByte()
             System.arraycopy(tlv, 0, payload, 1, tlv.size)
             
-            val packet = BitchatPacket(
+            val packet = RenChatPacket(
                 version = 1u,
                 type = MessageType.NOISE_ENCRYPTED.value,
                 senderID = hexStringToByteArray(senderPeerID),

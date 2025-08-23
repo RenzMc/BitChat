@@ -3,7 +3,7 @@
 agp = "8.10.1"
 kotlin = "2.2.0"
 compileSdk = "35"
-minSdk = "26" # API 26 for proper BLE support
+minSdk = "26"
 targetSdk = "34"
 
 # AndroidX Core
@@ -39,6 +39,12 @@ biometric = "1.1.0"
 
 # Security
 security-crypto = "1.1.0-beta01"
+
+# OkHttp
+okhttp = "4.11.0"
+
+# Google Play Services
+gms-location = "21.0.1"
 
 # Testing
 junit = "4.13.2"
@@ -91,6 +97,12 @@ androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "b
 # Security
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }
 
+# OkHttp
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+
+# Google Play Services
+gms-location = { module = "com.google.android.gms:play-services-location", version.ref = "gms-location" }
+
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext" }
@@ -135,4 +147,4 @@ testing = [
 compose-testing = [
     "androidx-compose-ui-test-junit4",
     "androidx-compose-ui-test-manifest"
-] 
+]

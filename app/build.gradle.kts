@@ -15,7 +15,6 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 14
         versionName = "1.0.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -23,9 +22,7 @@ android {
     }
 
     dependenciesInfo {
-        // Disables dependency metadata when building APKs.
         includeInApk = false
-        // Disables dependency metadata when building Android App Bundles.
         includeInBundle = false
     }
 
@@ -39,21 +36,24 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+
     buildFeatures {
         compose = true
     }
+
+    // hapus kotlinCompilerExtensionVersion, udah deprecated
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
     lint {
         baseline = file("lint-baseline.xml")
         abortOnError = false
@@ -61,50 +61,40 @@ android {
     }
 }
 
+kotlin {
+    jvmToolchain(17)
+    compilerOptions {
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        freeCompilerArgs.addAll(
+            listOf(
+                "-Xopt-in=kotlin.RequiresOptIn",
+                "-Xjvm-default=all"
+            )
+        )
+    }
+}
+
 dependencies {
-    // Core Android dependencies
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
-    
-    // Compose
+    implementation(libs.androidx.activity.compose)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
-    
-    // Lifecycle
+
     implementation(libs.bundles.lifecycle)
-    
-    // Navigation
     implementation(libs.androidx.navigation.compose)
-    
-    // Permissions
     implementation(libs.accompanist.permissions)
-    
-    // Cryptography
     implementation(libs.bundles.cryptography)
-    
-    // JSON
     implementation(libs.gson)
-    
-    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    
-    // Bluetooth
     implementation(libs.nordic.ble)
-
-    // WebSocket
     implementation(libs.okhttp)
-
-    // Google Play Services Location
     implementation(libs.gms.location)
-
-    // Security preferences
     implementation(libs.androidx.security.crypto)
-    
-    // Biometric authentication
     implementation(libs.androidx.biometric)
-    
-    // Testing
+
     testImplementation(libs.bundles.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.bundles.compose.testing)

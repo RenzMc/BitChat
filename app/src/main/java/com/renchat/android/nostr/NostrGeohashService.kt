@@ -5,13 +5,13 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.renchat.android.mesh.BluetoothMeshService
-import com.renchat.android.model.BitchatMessage
+import com.renchat.android.model.RenChatMessage
 import com.renchat.android.ui.ChatState
 import com.renchat.android.ui.MessageManager
 import com.renchat.android.ui.MeshDelegateHandler
 import com.renchat.android.ui.PrivateChatManager
 import com.renchat.android.ui.GeoPerson
-import com.renchat.android.ui.colorForPeerSeed
+//import com.renchat.android.ui.colorForPeerSeed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -78,6 +78,58 @@ class NostrGeohashService(
     private val processedNostrAcks = mutableSetOf<String>()
     private val nostrKeyMapping = mutableMapOf<String, String>() // senderPeerID -> nostrPubkey
     
+    // MARK: - Helper Functions
+    
+    /**
+     * Generate color for peer based on seed
+     */
+    private fun colorForPeerSeed(seed: String): androidx.compose.ui.graphics.Color {
+        val hash = seed.hashCode()
+        val r = (hash and 0xFF0000) shr 16
+        val g = (hash and 0x00FF00) shr 8
+        val b = hash and 0x0000FF
+        return androidx.compose.ui.graphics.Color(r / 255f, g / 255f, b / 255f)
+    }
+    
+    /**
+     * Show geohash notification
+     */
+    private fun showGeohashNotification(geohash: String, content: String) {
+        // Placeholder notification implementation
+        Log.d(TAG, "Geohash notification for $geohash: $content")
+    }
+    
+    /**
+     * Set current geohash
+     */
+    private fun setCurrentGeohash(geohash: String?) {
+        currentGeohash = geohash
+    }
+    
+    /**
+     * Clear mesh mention notifications
+     */
+    private fun clearMeshMentionNotifications() {
+        // Placeholder implementation
+        Log.d(TAG, "Cleared mesh mention notifications")
+    }
+    
+    /**
+     * Clear notifications for geohash
+     */
+    private fun clearNotificationsForGeohash(geohash: String) {
+        // Placeholder implementation
+        Log.d(TAG, "Cleared notifications for geohash: $geohash")
+    }
+    
+    /**
+     * Add geohash blocked user
+     */
+    private fun addGeohashBlockedUser(pubkey: String) {
+        // Placeholder implementation
+        Log.d(TAG, "Added blocked user: $pubkey")
+    }
+    
     // MARK: - Geohash Participant Tracking Properties
     
     private val geohashParticipants = mutableMapOf<String, MutableMap<String, Date>>() // geohash -> participantId -> lastSeen
@@ -86,7 +138,7 @@ class NostrGeohashService(
     
     // MARK: - Geohash Message History Properties
     
-    private val geohashMessageHistory = mutableMapOf<String, MutableList<BitchatMessage>>() // geohash -> messages
+    private val geohashMessageHistory = mutableMapOf<String, MutableList<RenChatMessage>>() // geohash -> messages
     private val maxGeohashMessages = 1000 // Maximum messages per geohash
     
     // MARK: - Location Channel Management Properties
@@ -190,7 +242,7 @@ class NostrGeohashService(
                 Log.i(TAG, "📤 Sent geohash message to ${channel.geohash}: ${content.take(50)}")
                 
                 // Add local echo message
-                val localMessage = BitchatMessage(
+                val localMessage = RenChatMessage(
                     sender = nickname ?: myPeerID,
                     content = content,
                     timestamp = Date(),
@@ -214,7 +266,7 @@ class NostrGeohashService(
     /**
      * Handle incoming Nostr message (gift wrap)
      */
-    private fun handleNostrMessage(giftWrap: NostrEvent) {
+    private fun handleNostrMessage(giftWrap: NostrEventRelay) {
         // Simple deduplication
         if (processedNostrEvents.contains(giftWrap.id)) return
         processedNostrEvents.add(giftWrap.id)
@@ -227,7 +279,7 @@ class NostrGeohashService(
         }
         
         // Client-side filtering: ignore messages older than 24 hours + 15 minutes buffer
-        val messageAge = System.currentTimeMillis() / 1000 - giftWrap.createdAt
+        val messageAge = System.currentTimeMillis() / 1000 - giftWrap.created_at
         if (messageAge > 87300) { // 24 hours + 15 minutes
             return
         }
@@ -266,7 +318,7 @@ class NostrGeohashService(
                 return
             }
             
-            val packet = com.renchat.android.protocol.BitchatPacket.fromBinaryData(packetData)
+            val packet = com.renchat.android.protocol.RenChatPacket.fromBinaryData(packetData)
             if (packet == null) {
                 Log.e(TAG, "Failed to parse embedded BitChat packet from Nostr DM")
                 return
@@ -357,7 +409,7 @@ class NostrGeohashService(
                 // Check if viewing this chat
                 val isViewingThisChat = state.getSelectedPrivateChatPeerValue() == targetPeerID
                 
-                // Create BitchatMessage
+                // Create RenChatMessage
                 val message = BitchatMessage(
                     id = messageId,
                     sender = senderNickname,
@@ -457,7 +509,7 @@ class NostrGeohashService(
     /**
      * Store a message in geohash history
      */
-    private fun storeGeohashMessage(geohash: String, message: BitchatMessage) {
+    private fun storeGeohashMessage(geohash: String, message: RenChatMessage) {
         val messages = geohashMessageHistory.getOrPut(geohash) { mutableListOf() }
         messages.add(message)
         messages.sortBy { it.timestamp }
@@ -1051,7 +1103,7 @@ class NostrGeohashService(
         geohash: String,
         senderName: String,
         content: String,
-        message: BitchatMessage
+        message: RenChatMessage
     ) {
         try {
             // Get user's current nickname
@@ -1107,7 +1159,7 @@ class NostrGeohashService(
     /**
      * Check if this is the first message in a subscribed geohash chat
      */
-    private fun checkIfFirstMessage(geohash: String, message: BitchatMessage): Boolean {
+    private fun checkIfFirstMessage(geohash: String, message: RenChatMessage): Boolean {
         // Get the message history for this geohash
         val messageHistory = geohashMessageHistory[geohash] ?: return true
         
@@ -1173,7 +1225,7 @@ class NostrGeohashService(
             
             val base64Content = content.removePrefix("bitchat1:")
             val packetData = base64URLDecode(base64Content) ?: return
-            val packet = com.renchat.android.protocol.BitchatPacket.fromBinaryData(packetData) ?: return
+            val packet = com.renchat.android.protocol.RenChatPacket.fromBinaryData(packetData) ?: return
             
             if (packet.type != com.renchat.android.protocol.MessageType.NOISE_ENCRYPTED.value) return
             
@@ -1203,7 +1255,7 @@ class NostrGeohashService(
                     val senderName = displayNameForNostrPubkey(senderPubkey)
                     val isViewingThisChat = state.getSelectedPrivateChatPeerValue() == convKey
                     
-                    val message = BitchatMessage(
+                    val message = RenChatMessage(
                         id = messageId,
                         sender = senderName,
                         content = pm.content,
@@ -1402,7 +1454,7 @@ class NostrGeohashService(
             dataManager.addGeohashBlockedUser(pubkeyHex)
             
             // Add system message
-            val systemMessage = com.renchat.android.model.BitchatMessage(
+            val systemMessage = com.renchat.android.model.RenChatMessage(
                 sender = "system",
                 content = "blocked $targetNickname in geohash channels",
                 timestamp = java.util.Date(),
@@ -1413,7 +1465,7 @@ class NostrGeohashService(
             Log.i(TAG, "🚫 Blocked geohash user: $targetNickname (pubkey: ${pubkeyHex.take(8)}...)")
         } else {
             // User not found
-            val systemMessage = com.renchat.android.model.BitchatMessage(
+            val systemMessage = com.renchat.android.model.RenChatMessage(
                 sender = "system",
                 content = "user '$targetNickname' not found in current geohash",
                 timestamp = java.util.Date(),

@@ -233,7 +233,7 @@ class FavoritesPersistenceService private constructor(private val context: Conte
             val favoritesJson = stateManager.getSecureValue(FAVORITES_KEY)
             if (favoritesJson != null) {
                 val type = object : TypeToken<Map<String, FavoriteRelationshipData>>() {}.type
-                val data: Map<String, FavoriteRelationshipData> = gson.fromJson(favoritesJson, type)
+                val data: Map<String, FavoriteRelationshipData> = gson.fromJson<Map<String, FavoriteRelationshipData>>(favoritesJson, type)
                 
                 favorites.clear()
                 data.forEach { (key, relationshipData) ->

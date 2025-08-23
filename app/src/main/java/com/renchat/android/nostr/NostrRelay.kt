@@ -19,7 +19,7 @@ import javax.net.ssl.SSLSocketFactory
  */
 class NostrRelay(
     private val relayUrl: String,
-    private val onMessage: (NostrEvent) -> Unit,
+    private val onMessage: (NostrEventRelay) -> Unit,
     private val onConnectionChange: (Boolean) -> Unit
 ) {
     companion object {
@@ -116,7 +116,7 @@ class NostrRelay(
         }
     }
     
-    fun publishEvent(event: NostrEvent) {
+    fun publishEvent(event: NostrEventRelay) {
         if (_isConnected.value) {
             val eventMessage = JSONArray().apply {
                 put("EVENT")
@@ -240,7 +240,7 @@ class NostrRelay(
 /**
  * Nostr event representation
  */
-data class NostrEvent(
+data class NostrEventRelay(
     val id: String,
     val pubkey: String,
     val created_at: Long,
@@ -250,7 +250,7 @@ data class NostrEvent(
     val sig: String
 ) {
     companion object {
-        fun fromJson(json: JSONObject): NostrEvent {
+        fun fromJson(json: JSONObject): NostrEventRelay {
             val tags = mutableListOf<List<String>>()
             val tagsArray = json.getJSONArray("tags")
             for (i in 0 until tagsArray.length()) {
@@ -262,7 +262,7 @@ data class NostrEvent(
                 tags.add(tag)
             }
             
-            return NostrEvent(
+            return NostrEventRelay(
                 id = json.getString("id"),
                 pubkey = json.getString("pubkey"),
                 created_at = json.getLong("created_at"),

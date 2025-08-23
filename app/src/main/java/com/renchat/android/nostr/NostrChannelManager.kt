@@ -102,7 +102,7 @@ class NostrChannelManager(private val context: Context) {
         val subscriptionId = "geohash_$geohash"
         val filter = NostrFilter(
             kinds = listOf(1), // Text note kind
-            tags = mapOf("g" to listOf(geohash)),
+            tagFilters = mapOf("g" to listOf(geohash)),
             limit = 100
         )
         
@@ -115,7 +115,7 @@ class NostrChannelManager(private val context: Context) {
         }
     }
     
-    private fun handleNostrEvent(event: NostrEvent) {
+    private fun handleNostrEvent(event: NostrEventRelay) {
         // Deduplicate events
         if (seenEventIds.contains(event.id)) {
             return
@@ -128,11 +128,10 @@ class NostrChannelManager(private val context: Context) {
         val message = RenChatMessage(
             sender = extractNickname(event) ?: event.pubkey.take(8),
             content = event.content,
-            timestamp = Date(event.created_at * 1000),
+            timestamp = Date(event.createdAt * 1000),
             isRelay = false,
             senderPeerID = event.pubkey,
-            channel = getCurrentGeohash(),
-            messageId = event.id
+            channel = getCurrentGeohash()
         )
         
         // Add to message history
@@ -145,7 +144,7 @@ class NostrChannelManager(private val context: Context) {
         Log.d(TAG, "Added message from ${message.sender}: ${message.content}")
     }
     
-    private fun extractNickname(event: NostrEvent): String? {
+    private fun extractNickname(event: NostrEventRelay): String? {
         // Look for nickname in tags or use a shortened pubkey
         event.tags.forEach { tag ->
             if (tag.size >= 2 && tag[0] == "nick") {
@@ -197,8 +196,7 @@ class NostrChannelManager(private val context: Context) {
             timestamp = Date(),
             isRelay = false,
             senderPeerID = "local", // Placeholder for local user
-            channel = currentGeohash,
-            messageId = event.id
+            channel = currentGeohash
         )
         
         messageHistory.add(localMessage)
@@ -219,7 +217,7 @@ class NostrChannelManager(private val context: Context) {
         return NostrEvent(
             id = UUID.randomUUID().toString().replace("-", ""),
             pubkey = pubkey,
-            created_at = now,
+            createdAt = now.toInt(),
             kind = 1,
             tags = tags,
             content = content,
