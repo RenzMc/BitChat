@@ -174,6 +174,42 @@ data class NostrFilter(
     }
     
     /**
+     * Convert to JSONObject for relay communication
+     */
+    fun toJson(): org.json.JSONObject {
+        val json = org.json.JSONObject()
+        
+        // Standard fields
+        ids?.let { 
+            val array = org.json.JSONArray()
+            it.forEach { array.put(it) }
+            json.put("ids", array)
+        }
+        authors?.let { 
+            val array = org.json.JSONArray()
+            it.forEach { array.put(it) }
+            json.put("authors", array)
+        }
+        kinds?.let { 
+            val array = org.json.JSONArray()
+            it.forEach { array.put(it) }
+            json.put("kinds", array)
+        }
+        since?.let { json.put("since", it) }
+        until?.let { json.put("until", it) }
+        limit?.let { json.put("limit", it) }
+        
+        // Tag filters with # prefix
+        tagFilters?.forEach { (tag, values) ->
+            val array = org.json.JSONArray()
+            values.forEach { array.put(it) }
+            json.put("#$tag", array)
+        }
+        
+        return json
+    }
+    
+    /**
      * Get debug description
      */
     fun getDebugDescription(): String {

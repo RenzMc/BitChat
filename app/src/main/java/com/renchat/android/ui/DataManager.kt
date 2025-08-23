@@ -22,12 +22,14 @@ class DataManager(private val context: Context) {
     private val _channelCreators = mutableMapOf<String, String>()
     private val _favoritePeers = mutableSetOf<String>()
     private val _blockedUsers = mutableSetOf<String>()
+    private val _geohashBlockedUsers = mutableSetOf<String>()
     private val _channelMembers = mutableMapOf<String, MutableSet<String>>()
     private val _lockedChats = mutableSetOf<String>()
     
     val channelCreators: Map<String, String> get() = _channelCreators
     val favoritePeers: Set<String> get() = _favoritePeers
     val blockedUsers: Set<String> get() = _blockedUsers
+    val geohashBlockedUsers: Set<String> get() = _geohashBlockedUsers
     val channelMembers: Map<String, MutableSet<String>> get() = _channelMembers
     val lockedChats: Set<String> get() = _lockedChats
     
@@ -193,6 +195,31 @@ class DataManager(private val context: Context) {
     
     fun isUserBlocked(fingerprint: String): Boolean {
         return _blockedUsers.contains(fingerprint)
+    }
+    
+    // MARK: - Geohash Blocked Users Management
+    
+    fun loadGeohashBlockedUsers() {
+        val savedGeohashBlockedUsers = prefs.getStringSet("geohash_blocked_users", emptySet()) ?: emptySet()
+        _geohashBlockedUsers.addAll(savedGeohashBlockedUsers)
+    }
+    
+    fun saveGeohashBlockedUsers() {
+        prefs.edit().putStringSet("geohash_blocked_users", _geohashBlockedUsers).apply()
+    }
+    
+    fun addGeohashBlockedUser(pubkeyHex: String) {
+        _geohashBlockedUsers.add(pubkeyHex)
+        saveGeohashBlockedUsers()
+    }
+    
+    fun removeGeohashBlockedUser(pubkeyHex: String) {
+        _geohashBlockedUsers.remove(pubkeyHex)
+        saveGeohashBlockedUsers()
+    }
+    
+    fun isGeohashUserBlocked(pubkeyHex: String): Boolean {
+        return _geohashBlockedUsers.contains(pubkeyHex)
     }
     
     // MARK: - Chat Lock Management

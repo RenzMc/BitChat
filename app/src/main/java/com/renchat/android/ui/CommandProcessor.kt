@@ -164,7 +164,7 @@ class CommandProcessor(
     
     private fun handleWhoCommand(meshService: BluetoothMeshService, viewModel: ChatViewModel? = null) {
         // Channel-aware who command (matches iOS behavior)
-        val (peerList, contextDescription) = if (viewModel != null) {
+        val result = if (viewModel != null) {
             when (val selectedChannel = viewModel.selectedLocationChannel.value) {
                 is com.renchat.android.geohash.ChannelID.Mesh,
                 null -> {
@@ -181,7 +181,7 @@ class CommandProcessor(
                     val geohashPeople = viewModel.geohashPeople.value ?: emptyList()
                     val currentNickname = state.getNicknameValue()
                     
-                    val participantList = geohashPeople.mapNotNull { person ->
+                    val participantList = geohashPeople.mapNotNull<com.renchat.android.model.GeoPerson, String> { person ->
                         val displayName = person.displayName
                         // Exclude self from list
                         if (displayName.startsWith("${currentNickname}#")) {
@@ -202,6 +202,8 @@ class CommandProcessor(
             }
             Pair(peerList, "online users")
         }
+        val peerList = result.first
+        val contextDescription = result.second
         
         val systemMessage = RenChatMessage(
             sender = "system",

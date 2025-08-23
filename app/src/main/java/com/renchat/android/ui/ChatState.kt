@@ -5,7 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import com.renchat.android.model.RenChatMessage
-import com.renchat.android.nostr.GeoPerson
+import com.renchat.android.model.GeoPerson
 
 /**
  * Centralized state definitions and data classes for the chat system

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.renchat.android.model.GeoPerson
 import java.util.*
 
 /**
@@ -22,14 +23,6 @@ import java.util.*
  * Shows peers discovered through Nostr ephemeral events instead of Bluetooth peers
  */
 
-/**
- * GeoPerson data class - matches iOS GeoPerson structure exactly
- */
-data class GeoPerson(
-    val id: String,           // pubkey hex (lowercased) - matches iOS
-    val displayName: String,  // nickname with #suffix - matches iOS  
-    val lastSeen: Date        // activity timestamp - matches iOS
-)
 
 @Composable
 fun GeohashPeopleList(
@@ -40,7 +33,7 @@ fun GeohashPeopleList(
     val colorScheme = MaterialTheme.colorScheme
     
     // Observe geohash people from ChatViewModel
-    val geohashPeople by viewModel.geohashPeople.observeAsState(emptyList())
+    val geohashPeople by viewModel.geohashPeople.observeAsState(emptyList<GeoPerson>())
     val selectedLocationChannel by viewModel.selectedLocationChannel.observeAsState()
     val isTeleported by viewModel.isTeleported.observeAsState(false)
     val nickname by viewModel.nickname.observeAsState("")
@@ -172,12 +165,14 @@ private fun GeohashPersonItem(
             )
         } else {
             // Face icon with teleportation state
-            val (iconName, iconColor) = when {
+            val iconResult = when {
                 isMe && isMyTeleported -> "face.dashed" to Color(0xFFFF9500) // Orange for teleported me
                 isTeleported -> "face.dashed" to colorScheme.onSurface // Regular color for teleported others
                 isMe -> "face.smiling" to Color(0xFFFF9500) // Orange for me
                 else -> "face.smiling" to colorScheme.onSurface // Regular color for others
             }
+            val iconName = iconResult.first
+            val iconColor = iconResult.second
             
             // Use appropriate Material icon (closest match to iOS SF Symbols)
             val icon = when (iconName) {
@@ -196,7 +191,9 @@ private fun GeohashPersonItem(
         Spacer(modifier = Modifier.width(8.dp))
         
         // Display name with suffix handling (matches iOS splitSuffix logic)
-        val (baseName, suffix) = com.renchat.android.ui.splitSuffix(person.displayName)
+        val splitResult = com.renchat.android.ui.splitSuffix(person.displayName)
+        val baseName = splitResult.first
+        val suffix = splitResult.second
         
         // Get consistent peer color (matches iOS color assignment exactly)
         val isDark = colorScheme.background.red + colorScheme.background.green + colorScheme.background.blue < 1.5f

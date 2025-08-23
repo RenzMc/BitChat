@@ -52,19 +52,7 @@ class ChatViewModel(
     val chatLockManager = ChatLockManager(application.applicationContext, dataManager)
     private val nostrChannelManager = com.renchat.android.nostr.NostrChannelManager(application.applicationContext)
     
-    // Nostr and Geohash service - initialize singleton
-    private val nostrGeohashService = NostrGeohashService.initialize(
-        application = application,
-        state = state,
-        messageManager = messageManager,
-        privateChatManager = privateChatManager,
-        meshDelegateHandler = meshDelegateHandler,
-        coroutineScope = viewModelScope,
-        dataManager = dataManager,
-        notificationManager = notificationManager
-    )
-    
-    // Delegate handler for mesh callbacks
+    // Delegate handler for mesh callbacks - moved up to fix forward reference
     private val meshDelegateHandler = MeshDelegateHandler(
         state = state,
         messageManager = messageManager,
@@ -75,6 +63,18 @@ class ChatViewModel(
         onHapticFeedback = { ChatViewModelUtils.triggerHapticFeedback(application.applicationContext) },
         getMyPeerID = { meshService.myPeerID },
         getMeshService = { meshService }
+    )
+    
+    // Nostr and Geohash service - initialize singleton after meshDelegateHandler
+    private val nostrGeohashService = NostrGeohashService.initialize(
+        application = application,
+        state = state,
+        messageManager = messageManager,
+        privateChatManager = privateChatManager,
+        meshDelegateHandler = meshDelegateHandler,
+        coroutineScope = viewModelScope,
+        dataManager = dataManager,
+        notificationManager = notificationManager
     )
     
     // Expose state through LiveData (maintaining the same interface)
@@ -110,7 +110,7 @@ class ChatViewModel(
     val lockedChats: LiveData<Set<String>> = chatLockManager.lockedChats
     val selectedLocationChannel: LiveData<com.renchat.android.geohash.ChannelID?> = state.selectedLocationChannel
     val isTeleported: LiveData<Boolean> = state.isTeleported
-    val geohashPeople: LiveData<List<com.renchat.android.nostr.GeoPerson>> = state.geohashPeople
+    val geohashPeople: LiveData<List<com.renchat.android.model.GeoPerson>> = state.geohashPeople
     val teleportedGeo: LiveData<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: LiveData<Map<String, Int>> = state.geohashParticipantCounts
     
@@ -142,7 +142,7 @@ class ChatViewModel(
         dataManager.loadFavorites()
         state.setFavoritePeers(dataManager.favoritePeers.toSet())
         dataManager.loadBlockedUsers()
-        dataManager.loadGeohashBlockedUsers()
+        loadGeohashBlockedUsers()
         
         // Log all favorites at startup
         dataManager.logAllFavorites()
@@ -685,5 +685,12 @@ class ChatViewModel(
      */
     fun blockUserInGeohash(targetNickname: String) {
         nostrGeohashService.blockUserInGeohash(targetNickname)
+    }
+    
+    /**
+     * Load geohash blocked users from DataManager
+     */
+    private fun loadGeohashBlockedUsers() {
+        dataManager.loadGeohashBlockedUsers()
     }
 }

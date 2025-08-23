@@ -178,7 +178,7 @@ class NostrGeohashService(
                 filter = dmFilter,
                 id = "chat-messages",
                 handler = { event ->
-                    handleNostrMessage(event)
+                    handleNostrMessage(event as NostrEventRelay)
                 }
             )
             
@@ -294,7 +294,7 @@ class NostrGeohashService(
         
         try {
             val decryptResult = NostrProtocol.decryptPrivateMessage(
-                giftWrap = giftWrap,
+                giftWrap = giftWrap as NostrEvent,
                 recipientIdentity = currentIdentity
             )
             
@@ -1334,7 +1334,7 @@ class NostrGeohashService(
      */
     fun colorForNostrPubkey(pubkeyHex: String, isDark: Boolean): androidx.compose.ui.graphics.Color {
         val seed = "nostr:${pubkeyHex.lowercase()}"
-        return colorForPeerSeed(seed, isDark).copy()
+        return colorForPeerSeed(seed).copy()
     }
     
     // MARK: - Nostr Direct Message Sending
