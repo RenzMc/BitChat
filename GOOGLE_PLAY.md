@@ -1,0 +1,1 @@
+I, callebtc, creator of RenChat for android (rebranded from bitchat), owner of the copyright claims, and owner of the official RenChat android repository (https://github.com/permissionlesstech/renchat-android), hereby authorize Verse Communication PBC to publish RenChat (com.renchat.droid) on the Google Play Store.

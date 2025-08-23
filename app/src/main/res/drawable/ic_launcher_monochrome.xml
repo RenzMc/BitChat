@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Simple R letter for monochrome icon -->
+    <path
+        android:pathData="M35,30 L35,78 M35,30 L60,30 Q68,30 68,38 Q68,46 60,46 L35,46 M60,46 L68,78"
+        android:strokeColor="#000000"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+        
+</vector>

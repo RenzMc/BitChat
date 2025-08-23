@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Blue rounded background -->
+    <path
+        android:pathData="M14,14 L94,14 Q94,14 94,14 L94,94 Q94,94 94,94 L14,94 Q14,94 14,94 L14,14 Z"
+        android:fillColor="#1E88E5"/>
+    
+    <!-- Speech bubble shape -->
+    <path
+        android:pathData="M20,25 L75,25 Q80,25 80,30 L80,55 Q80,60 75,60 L35,60 L25,70 L25,60 Q20,60 20,55 L20,30 Q20,25 25,25 Z"
+        android:fillColor="#0D47A1"/>
+    
+    <!-- Letter R -->
+    <path
+        android:pathData="M35,35 L35,55 M35,35 L50,35 Q55,35 55,40 Q55,45 50,45 L35,45 M50,45 L55,55"
+        android:strokeColor="#000000"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    
+    <!-- Bluetooth dots -->
+    <circle
+        cx="85"
+        cy="25"
+        r="2dp"
+        android:fillColor="#000000"/>
+    
+    <circle
+        cx="88"
+        cy="30"
+        r="2dp"
+        android:fillColor="#000000"/>
+    
+    <circle
+        cx="85"
+        cy="35"
+        r="2dp"
+        android:fillColor="#000000"/>
+
+</vector>
