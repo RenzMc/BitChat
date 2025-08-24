@@ -136,7 +136,20 @@ fun MessageItem(
     Box(modifier = Modifier.fillMaxWidth()) {    
         Row(    
             modifier = Modifier    
-                .fillMaxWidth(),    
+                .fillMaxWidth()
+                .let { modifier ->
+                    if (canPinMessages && !message.isViewOnce) {
+                        modifier.combinedClickable(
+                            onLongClick = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showPinMenu = true
+                            },
+                            onClick = { /* Do nothing on regular click */ }
+                        )
+                    } else {
+                        modifier
+                    }
+                },    
             horizontalArrangement = Arrangement.SpaceBetween,    
             verticalAlignment = Alignment.Top    
         ) {    
@@ -196,33 +209,15 @@ fun MessageItem(
                     )    
                 }    
                     
-                // Show pin icon for pinned messages with simple click like settings gear
+                // Show pin icon ONLY for pinned messages (like WhatsApp)
                 if (message.isPinned) {    
                     Icon(    
                         imageVector = Icons.Filled.PushPin,    
-                        contentDescription = "Pinned message - click to unpin",    
+                        contentDescription = "Pinned message",    
                         modifier = Modifier    
                             .size(14.dp)    
-                            .padding(end = 4.dp)
-                            .clickable { 
-                                if (canPinMessages) {
-                                    showPinMenu = true 
-                                }
-                            },    
+                            .padding(end = 4.dp),    
                         tint = Color(0xFF007AFF) // Blue color for pin icon    
-                    )    
-                } else if (canPinMessages && !message.isViewOnce) {
-                    // Add simple pin button for non-pinned messages
-                    Icon(    
-                        imageVector = Icons.Outlined.PushPin,    
-                        contentDescription = "Click to pin message",    
-                        modifier = Modifier    
-                            .size(14.dp)    
-                            .padding(end = 4.dp)
-                            .clickable { 
-                                showPinMenu = true 
-                            },    
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )    
                 }    
                     
