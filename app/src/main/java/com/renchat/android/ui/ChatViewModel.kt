@@ -10,6 +10,7 @@ import com.renchat.android.mesh.BluetoothMeshDelegate
 import com.renchat.android.mesh.BluetoothMeshService
 import com.renchat.android.model.RenChatMessage
 import com.renchat.android.model.Group
+import com.renchat.android.model.GroupAction
 import com.renchat.android.protocol.RenChatPacket
 import com.renchat.android.nostr.NostrGeohashService
 import kotlinx.coroutines.launch
@@ -35,10 +36,10 @@ class ChatViewModel(
     private val state = ChatState()
     
     // Specialized managers
-    private val dataManager = DataManager(application.applicationContext)
+    val dataManager = DataManager(application.applicationContext)
     private val messageManager = MessageManager(state)
     private val channelManager = ChannelManager(state, messageManager, dataManager, viewModelScope)
-    private val groupManager = GroupManager(state, messageManager, dataManager, viewModelScope)
+    val groupManager = GroupManager(state, messageManager, dataManager, viewModelScope)
     
     // Enhanced moderation system with anti-bypass protection
     private val spamFilterManager = SpamFilterManager(application.applicationContext, dataManager)
@@ -350,7 +351,7 @@ class ChatViewModel(
         )
         
         if (currentChannel.startsWith("#group:")) {
-            groupManager.addGroupMessage(currentChannel, pinMessage, myPeerID)
+            messageManager.addChannelMessage(currentChannel, pinMessage)
         } else {
             channelManager.addChannelMessage(currentChannel, pinMessage, myPeerID)
         }
@@ -408,7 +409,7 @@ class ChatViewModel(
         )
         
         if (currentChannel.startsWith("#group:")) {
-            groupManager.addGroupMessage(currentChannel, unpinMessage, myPeerID)
+            messageManager.addChannelMessage(currentChannel, unpinMessage)
         } else {
             channelManager.addChannelMessage(currentChannel, unpinMessage, myPeerID)
         }

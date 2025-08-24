@@ -182,6 +182,111 @@ class SpamFilterManager(
             Regex("""[A-Z\s]{30,}"""), // 30+ consecutive caps (very high threshold)
             SpamSeverity.LOW,
             "Excessive caps"
+        ),
+        
+        // Enhanced modern scam patterns
+        SpamPattern(
+            Regex("""(tesla\s+giveaway|elon\s+musk\s+giveaway|apple\s+giveaway|amazon\s+gift\s+card|google\s+play\s+card|steam\s+wallet|paypal\s+money|cash\s+app\s+flip|venmo\s+flip|zelle\s+flip).*?(send\s+first|trust\s+me|guarantee|legit|verified)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.CRITICAL,
+            "Modern financial scam"
+        ),
+        
+        // Sophisticated crypto MEV/defi scams
+        SpamPattern(
+            Regex("""(mev\s+bot|sandwich\s+attack|flash\s+loan|arbitrage\s+bot|front\s+running|sniper\s+bot|rugpull\s+scanner|degen\s+ape|shitcoin|moonshot|rug\s+pull|honey\s+pot|liquidity\s+lock|fair\s+launch|stealth\s+launch|presale\s+bot).*?(guaranteed\s+profit|100%\s+roi|passive\s+income|easy\s+money|no\s+risk)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.CRITICAL,
+            "Advanced DeFi scam"
+        ),
+        
+        // Social engineering and urgency tactics
+        SpamPattern(
+            Regex("""(urgent|emergency|immediate|asap|hurry|quick|fast|limited\s+time|expires\s+soon|act\s+now|don't\s+miss|last\s+chance|only\s+today|final\s+offer).*?(send\s+money|wire\s+transfer|western\s+union|moneygram|bitcoin\s+payment|crypto\s+payment|gift\s+cards|prepaid\s+cards)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "Social engineering urgency scam"
+        ),
+        
+        // AI-generated text patterns (ChatGPT, Claude, etc.)
+        SpamPattern(
+            Regex("""(as\s+an\s+ai|i'm\s+an\s+ai|artificial\s+intelligence|language\s+model|i\s+don't\s+have\s+personal|i\s+can't\s+browse|i\s+don't\s+have\s+access\s+to\s+real-time|my\s+knowledge\s+cutoff|i\s+apologize\s+for\s+any\s+confusion|i\s+understand\s+you're\s+looking\s+for|here's\s+what\s+i\s+can\s+help\s+with)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.MEDIUM,
+            "AI-generated spam content"
+        ),
+        
+        // Advanced romance/catfish scams
+        SpamPattern(
+            Regex("""(lonely\s+soldier|widowed|deployed|overseas|military\s+base|peacekeeping|un\s+mission).*?(love\s+you|miss\s+you|need\s+money|emergency|medical\s+bills|visa\s+fees|travel\s+expenses|western\s+union)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "Romance/Military impersonation scam"
+        ),
+        
+        // Modern social media manipulation
+        SpamPattern(
+            Regex("""(follow\s+back|f4f|like\s+for\s+like|sub\s+for\s+sub|subscribe\s+to\s+my|check\s+out\s+my\s+profile|dm\s+me|hit\s+me\s+up|add\s+me\s+on).*?(instagram|tiktok|snapchat|onlyfans|twitter|youtube|twitch|discord)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.MEDIUM,
+            "Social media manipulation spam"
+        ),
+        
+        // Sophisticated phishing with typos (intentional misspellings)
+        SpamPattern(
+            Regex("""(amaz0n|appl3|g00gle|micr0soft|payp4l|fac3book|netfl1x|sp0tify|uber|lyft).*?(suspended|verify|update|confirm|security|locked|unusual\s+activity)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.CRITICAL,
+            "Brand impersonation phishing"
+        ),
+        
+        // Advanced job scam patterns
+        SpamPattern(
+            Regex("""(work\s+from\s+home|remote\s+work|easy\s+money|data\s+entry|envelope\s+stuffing|mystery\s+shopper|survey\s+taker|virtual\s+assistant).*?(\$\d+\s+per\s+hour|\$\d+\s+per\s+day|no\s+experience|immediate\s+start|guaranteed\s+income|send\s+\$\d+|processing\s+fee|training\s+fee)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "Work-from-home scam"
+        ),
+        
+        // Sophisticated investment scams
+        SpamPattern(
+            Regex("""(forex\s+signal|binary\s+option|stock\s+tip|insider\s+trading|pump\s+and\s+dump|penny\s+stock|day\s+trading\s+course|cryptocurrency\s+course|trading\s+bot|signal\s+group).*?(guaranteed\s+return|risk\s+free|sure\s+profit|insider\s+info|exclusive\s+access|vip\s+group|limited\s+spots)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "Investment scam signals"
+        ),
+        
+        // Modern tech support scams
+        SpamPattern(
+            Regex("""(your\s+computer|virus\s+detected|malware\s+found|system\s+infected|microsoft\s+support|apple\s+support|windows\s+defender|security\s+alert|suspicious\s+activity\s+detected|call\s+immediately|tech\s+support).*?(call\s+now|immediate\s+action|click\s+here|download\s+now|install\s+software|remote\s+access|teamviewer|anydesk)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.CRITICAL,
+            "Tech support scam"
+        ),
+        
+        // Advanced referral and MLM schemes
+        SpamPattern(
+            Regex("""(join\s+my\s+team|business\s+opportunity|financial\s+freedom|be\s+your\s+own\s+boss|quit\s+your\s+job|make\s+money\s+online|pyramid\s+scheme|multi\s+level\s+marketing|mlm|network\s+marketing).*?(passive\s+income|residual\s+income|unlimited\s+earning|six\s+figure|seven\s+figure|millionaire\s+mindset|entrepreneur\s+lifestyle)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "MLM/Pyramid scheme spam"
+        ),
+        
+        // Sophisticated health and supplement scams
+        SpamPattern(
+            Regex("""(lose\s+weight\s+fast|belly\s+fat|miracle\s+cure|natural\s+supplement|ancient\s+secret|doctors\s+hate|big\s+pharma|fda\s+approved|clinically\s+proven).*?(lose\s+\d+\s+pounds|guaranteed\s+results|no\s+side\s+effects|natural\s+ingredients|secret\s+formula|limited\s+time|order\s+now)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "Health supplement scam"
+        ),
+        
+        // Advanced fake news and conspiracy patterns
+        SpamPattern(
+            Regex("""(wake\s+up\s+sheeple|mainstream\s+media\s+lies|government\s+coverup|deep\s+state|illuminati|new\s+world\s+order|false\s+flag|crisis\s+actors|they\s+don't\s+want\s+you\s+to\s+know).*?(share\s+before|spread\s+the\s+word|they'll\s+delete\s+this|censored|banned|suppressed)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.MEDIUM,
+            "Conspiracy theory spam"
+        ),
+        
+        // Advanced gaming scams
+        SpamPattern(
+            Regex("""(free\s+vbucks|free\s+robux|free\s+skins|csgo\s+skins|valorant\s+points|apex\s+coins|fortnite\s+hack|minecraft\s+premium|steam\s+account|game\s+hack|aimbot|wallhack).*?(download\s+now|no\s+survey|no\s+verification|instant\s+delivery|working\s+2024|working\s+2025|legit\s+method)""", RegexOption.IGNORE_CASE),
+            SpamSeverity.HIGH,
+            "Gaming scam"
+        ),
+        
+        // Sophisticated Unicode and homograph attacks
+        SpamPattern(
+            Regex("""[а-я]{3,}.*[a-z]{3,}|[a-z]{3,}.*[а-я]{3,}"""), // Mixing Cyrillic and Latin
+            SpamSeverity.MEDIUM,
+            "Homograph attack detected"
         )
     )
     
