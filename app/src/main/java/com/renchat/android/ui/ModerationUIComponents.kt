@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.renchat.android.R
 import com.renchat.android.ui.CommunityReportManager.ReportReason
+import com.renchat.android.ui.ModerationManager.UserModerationProfile
+import com.renchat.android.ui.ModerationManager.RiskLevel
 
 /**
  * UI components for moderation and community reporting

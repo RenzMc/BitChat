@@ -180,18 +180,29 @@ fun ChatUserSheet(
         }
     }
     
-    // Report dialog - TODO: Implement ReportUserDialog when ModerationUIComponents is available
+    // Report dialog
     if (showReportDialog) {
         val peerID = viewModel.getPeerIDForNickname(targetNickname)
         if (peerID != null) {
-            // Temporary simple report action until ReportUserDialog is implemented
+            ReportUserDialog(
+                targetNickname = targetNickname,
+                onReportSubmit = { reason, description ->
+                    coroutineScope.launch {
+                        viewModel.reportUser(
+                            targetPeerID = peerID,
+                            reason = reason,
+                            description = description,
+                            messageContent = selectedMessage?.content
+                        )
+                        showReportDialog = false
+                        onDismiss()
+                    }
+                },
+                onDismiss = { showReportDialog = false }
+            )
+        } else {
+            // Fallback: simply close dialog if peerID not found
             LaunchedEffect(Unit) {
-                viewModel.reportUser(
-                    targetPeerID = peerID,
-                    reason = ReportReason.OTHER, // Default reason
-                    description = "User reported via action sheet",
-                    messageContent = selectedMessage?.content
-                )
                 showReportDialog = false
                 onDismiss()
             }
