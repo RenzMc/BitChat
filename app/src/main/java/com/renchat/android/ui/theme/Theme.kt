@@ -8,6 +8,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.renchat.android.ui.SettingsManager
@@ -64,12 +67,20 @@ fun RenChatTheme(
 ) {
     val context = LocalContext.current
     
+    // Observe theme mode changes to make the composable reactive
+    val currentThemeMode by settingsManager?.themeMode ?: remember { mutableStateOf(SettingsManager.ThemeMode.SYSTEM) }
+    
     // Determine if dynamic color is available and enabled
     val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            settingsManager?.isDynamicColorEnabled() == true
+            currentThemeMode == SettingsManager.ThemeMode.DYNAMIC
     
-    // Determine actual dark theme based on settings
-    val actualDarkTheme = settingsManager?.isDarkMode(darkTheme) ?: darkTheme
+    // Determine actual dark theme based on current settings
+    val actualDarkTheme = when (currentThemeMode) {
+        SettingsManager.ThemeMode.SYSTEM -> darkTheme
+        SettingsManager.ThemeMode.LIGHT -> false
+        SettingsManager.ThemeMode.DARK -> true
+        SettingsManager.ThemeMode.DYNAMIC -> darkTheme
+    }
     
     val colorScheme = when {
         dynamicColor && actualDarkTheme -> {

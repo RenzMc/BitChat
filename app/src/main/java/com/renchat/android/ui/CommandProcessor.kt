@@ -34,6 +34,7 @@ class CommandProcessor(
         CommandSuggestion("/m", listOf("/msg"), "<nickname> [message]", "send private message"),
         CommandSuggestion("/me", emptyList(), "<action>", "perform an action"),
         CommandSuggestion("/nick", emptyList(), "<nickname>", "change your nickname"),
+        CommandSuggestion("/report", emptyList(), "<nickname> <reason>", "report a user for inappropriate behavior"),
         CommandSuggestion("/slap", emptyList(), "<nickname>", "slap someone with a trout"),
         CommandSuggestion("/topic", emptyList(), "[text]", "view or set channel topic"),
         CommandSuggestion("/unblock", emptyList(), "<nickname>", "unblock a peer"),
@@ -70,6 +71,7 @@ class CommandProcessor(
             "/pass" -> handlePassCommand(parts, myPeerID)
             "/block" -> handleBlockCommand(parts, meshService)
             "/unblock" -> handleUnblockCommand(parts, meshService)
+            "/report" -> handleReportCommand(parts, meshService, viewModel)
             "/hug" -> handleActionCommand(parts, "gives", "a warm hug 🫂", meshService, myPeerID, onSendMessage)
             "/slap" -> handleActionCommand(parts, "slaps", "around a bit with a large trout 🐟", meshService, myPeerID, onSendMessage)
             "/channels" -> handleChannelsCommand()
@@ -308,6 +310,77 @@ class CommandProcessor(
             val systemMessage = RenChatMessage(
                 sender = "system",
                 content = "usage: /unblock <nickname>",
+                timestamp = Date(),
+                isRelay = false
+            )
+            messageManager.addMessage(systemMessage)
+        }
+    }
+    
+    private fun handleReportCommand(parts: List<String>, meshService: BluetoothMeshService, viewModel: ChatViewModel?) {
+        if (parts.size < 3) {
+            val systemMessage = RenChatMessage(
+                sender = "system",
+                content = "usage: /report <nickname> <reason>\nExample: /report baduser harassment",
+                timestamp = Date(),
+                isRelay = false
+            )
+            messageManager.addMessage(systemMessage)
+            return
+        }
+        
+        val targetName = parts[1].removePrefix("@")
+        val reason = parts.drop(2).joinToString(" ")
+        
+        // Find the peer ID for the nickname
+        val targetPeerID = getPeerIDForNickname(targetName, meshService)
+        
+        if (targetPeerID == null) {
+            val systemMessage = RenChatMessage(
+                sender = "system",
+                content = "user '$targetName' not found. they may be offline or using a different nickname.",
+                timestamp = Date(),
+                isRelay = false
+            )
+            messageManager.addMessage(systemMessage)
+            return
+        }
+        
+        // Submit the report through the viewModel
+        viewModel?.let { vm ->
+            try {
+                val reportId = vm.reportUser(
+                    targetPeerID = targetPeerID,
+                    reason = ReportReason.OTHER, // Default to OTHER, can be enhanced later
+                    description = "Command report: $reason",
+                    messageContent = null
+                )
+                
+                val systemMessage = RenChatMessage(
+                    sender = "system",
+                    content = if (reportId != null) {
+                        "report submitted against '$targetName' for: $reason\nreport id: ${reportId.take(8)}"
+                    } else {
+                        "failed to submit report against '$targetName'. please try again later."
+                    },
+                    timestamp = Date(),
+                    isRelay = false
+                )
+                messageManager.addMessage(systemMessage)
+                
+            } catch (e: Exception) {
+                val systemMessage = RenChatMessage(
+                    sender = "system",
+                    content = "error submitting report: ${e.message}",
+                    timestamp = Date(),
+                    isRelay = false
+                )
+                messageManager.addMessage(systemMessage)
+            }
+        } ?: run {
+            val systemMessage = RenChatMessage(
+                sender = "system",
+                content = "reporting service unavailable. please try again later.",
                 timestamp = Date(),
                 isRelay = false
             )

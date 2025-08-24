@@ -335,7 +335,7 @@ private fun PrivateChatHeader(
                 imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
                 contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                 modifier = Modifier.size(18.dp), // Slightly larger than sidebar icon
-                tint = if (isFavorite) Color(0xFFFFD700) else Color(0x87878700) // Yellow or grey
+                tint = if (isFavorite) Color(0xFFFFD700) else Color(0xFF878787) // Yellow or grey
             )
         }
     }
@@ -469,12 +469,21 @@ private fun MainHeader(
         
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp), // Reduced spacing to make room
+            modifier = Modifier.wrapContentWidth() // Ensure proper wrapping
         ) {
+            // Space for additional action icons (channel joining, location-based features, etc.)
+            // These will appear here when needed without covering the gear icon
+            HeaderActionIcons(
+                isConnected = isConnected,
+                joinedChannels = joinedChannels,
+                colorScheme = colorScheme
+            )
+            
             // Settings gear icon
             IconButton(
                 onClick = { showThemeDialog = true },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(28.dp) // Slightly larger touch area
             ) {
                 Icon(
                     imageVector = Icons.Filled.Settings,
@@ -490,7 +499,8 @@ private fun MainHeader(
                 hasUnreadChannels = hasUnreadChannels,
                 hasUnreadPrivateMessages = hasUnreadPrivateMessages,
                 isConnected = isConnected,
-                onClick = onSidebarClick
+                onClick = onSidebarClick,
+                modifier = Modifier.wrapContentWidth() // Ensure it doesn't expand unnecessarily
             )
         }
     }
@@ -554,4 +564,45 @@ private fun ThemeSelectionDialog(
             }
         }
     )
+}
+
+@Composable
+private fun HeaderActionIcons(
+    isConnected: Boolean,
+    joinedChannels: Set<String>,
+    colorScheme: ColorScheme
+) {
+    // This function provides space for new action icons that might appear
+    // based on app state (location-based joining, channel discovery, etc.)
+    // Icons will appear here without covering the gear settings icon
+    
+    // Example: Location-based channel joining icon
+    // if (shouldShowLocationIcon) {
+    //     IconButton(
+    //         onClick = { /* location-based joining */ },
+    //         modifier = Modifier.size(24.dp)
+    //     ) {
+    //         Icon(
+    //             imageVector = Icons.Filled.LocationOn,
+    //             contentDescription = "Join nearby channels",
+    //             modifier = Modifier.size(16.dp),
+    //             tint = colorScheme.primary
+    //         )
+    //     }
+    // }
+    
+    // Example: Channel discovery icon
+    // if (shouldShowDiscoveryIcon) {
+    //     IconButton(
+    //         onClick = { /* channel discovery */ },
+    //         modifier = Modifier.size(24.dp)
+    //     ) {
+    //         Icon(
+    //             imageVector = Icons.Filled.Search,
+    //             contentDescription = "Discover channels",
+    //             modifier = Modifier.size(16.dp),
+    //             tint = colorScheme.primary
+    //         )
+    //     }
+    // }
 }

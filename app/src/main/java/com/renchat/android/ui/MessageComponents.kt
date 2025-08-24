@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -78,7 +79,7 @@ fun MessagesList(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            items(messages) { message ->
+            items(messages, key = { it.id }) { message ->
                 // Filter out view-once messages that should be hidden
                 val shouldShowMessage = when {
                     !message.isViewOnce -> true // Regular messages always show
@@ -120,11 +121,11 @@ fun MessageItem(
     val colorScheme = MaterialTheme.colorScheme
     val timeFormatter = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     
-    // View-once state
-    var isViewOnceOpened by remember { mutableStateOf(false) }
+    // View-once state with proper key
+    var isViewOnceOpened by remember(message.id) { mutableStateOf(false) }
     
     // Context menu state
-    var showContextMenu by remember { mutableStateOf(false) }
+    var showContextMenu by remember(message.id) { mutableStateOf(false) }
     
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -133,8 +134,18 @@ fun MessageItem(
                 .let { modifier ->
                     if (canPinMessages && !message.isViewOnce) {
                         modifier.combinedClickable(
-                            onLongClick = { showContextMenu = true },
-                            onClick = { }
+                            onLongClick = { 
+                                try {
+                                    // Add small delay to ensure UI stability
+                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                        kotlinx.coroutines.delay(50) // Small delay for stability
+                                        showContextMenu = true
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("MessageComponents", "Error showing context menu", e)
+                                }
+                            },
+                            onClick = { /* Do nothing on regular click */ }
                         )
                     } else {
                         modifier
@@ -148,45 +159,44 @@ fun MessageItem(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.Top
         ) {
-            // View-once indicator - WhatsApp style
+            // Enhanced View-once indicator with popup
             if (message.isViewOnce && message.senderPeerID != meshService.myPeerID && !isViewOnceOpened) {
+                // Show "View Once click to open" instead of content
                 Row(
                     modifier = Modifier
                         .clickable {
                             isViewOnceOpened = true
                             onViewOnceClick(message.id)
-                            // Mark as viewed after opening
-                            onMessageViewed(message.id)
+                            // Mark as viewed after opening - we'll handle the popup separately
                         }
                         .background(
                             colorScheme.primary.copy(alpha = 0.1f),
-                            shape = CircleShape
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                         )
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .background(
-                                colorScheme.primary,
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "1",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
+                    // View once icon
+                    Icon(
+                        imageVector = Icons.Filled.Visibility,
+                        contentDescription = "View once message",
+                        modifier = Modifier.size(18.dp),
+                        tint = colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "View once",
-                        fontSize = 12.sp,
+                        text = "View Once - click to open",
+                        fontSize = 14.sp,
                         color = colorScheme.primary,
                         fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Small indicator arrow
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowRight,
+                        contentDescription = "Click to view",
+                        modifier = Modifier.size(16.dp),
+                        tint = colorScheme.primary.copy(alpha = 0.7f)
                     )
                 }
             } else if (message.isViewOnce && message.senderPeerID == meshService.myPeerID) {
@@ -245,15 +255,26 @@ fun MessageItem(
         if (showContextMenu && canPinMessages && !message.isViewOnce) {
             DropdownMenu(
                 expanded = showContextMenu,
-                onDismissRequest = { showContextMenu = false },
+                onDismissRequest = { 
+                    try {
+                        showContextMenu = false
+                    } catch (e: Exception) {
+                        android.util.Log.e("MessageComponents", "Error dismissing context menu", e)
+                    }
+                },
                 modifier = Modifier.background(colorScheme.surface)
             ) {
                 if (isPinned) {
                     DropdownMenuItem(
                         text = { Text("Unpin Message") },
                         onClick = {
-                            onUnpinMessage()
-                            showContextMenu = false
+                            try {
+                                showContextMenu = false
+                                onUnpinMessage()
+                            } catch (e: Exception) {
+                                android.util.Log.e("MessageComponents", "Error unpinning message", e)
+                                showContextMenu = false
+                            }
                         },
                         leadingIcon = {
                             Icon(
@@ -266,8 +287,13 @@ fun MessageItem(
                     DropdownMenuItem(
                         text = { Text("Pin Message") },
                         onClick = {
-                            onPinMessage(message)
-                            showContextMenu = false
+                            try {
+                                showContextMenu = false
+                                onPinMessage(message)
+                            } catch (e: Exception) {
+                                android.util.Log.e("MessageComponents", "Error pinning message", e)
+                                showContextMenu = false
+                            }
                         },
                         leadingIcon = {
                             Icon(

@@ -35,27 +35,37 @@ fun PinnedMessageIsland(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     
-    // Animation for appearing/disappearing
+    // Safe animation for appearing/disappearing
     AnimatedVisibility(
         visible = pinnedMessage != null,
-        enter = slideInVertically(
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            ),
-            initialOffsetY = { -it }
-        ) + fadeIn(
-            animationSpec = tween(300)
-        ),
-        exit = slideOutVertically(
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            ),
-            targetOffsetY = { -it }
-        ) + fadeOut(
-            animationSpec = tween(200)
-        ),
+        enter = try {
+            slideInVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium // Changed from Low to Medium for stability
+                ),
+                initialOffsetY = { -it }
+            ) + fadeIn(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("PinnedMessageIsland", "Enter animation error", e)
+            fadeIn(tween(200)) // Fallback to simple fade
+        },
+        exit = try {
+            slideOutVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium // Changed from Low to Medium for stability
+                ),
+                targetOffsetY = { -it }
+            ) + fadeOut(
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("PinnedMessageIsland", "Exit animation error", e)
+            fadeOut(tween(150)) // Fallback to simple fade
+        },
         modifier = modifier
     ) {
         pinnedMessage?.let { message ->
@@ -93,13 +103,19 @@ private fun PinnedMessageContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Pin icon with subtle animation
-            var iconScale by remember { mutableStateOf(1f) }
+            // Pin icon with safe animation
+            var iconScale by remember(message.id) { mutableStateOf(1f) }
             
             LaunchedEffect(message.id) {
-                iconScale = 1.2f
-                kotlinx.coroutines.delay(150)
-                iconScale = 1f
+                try {
+                    iconScale = 1.2f
+                    kotlinx.coroutines.delay(150)
+                    iconScale = 1f
+                } catch (e: Exception) {
+                    // Reset to default if animation fails
+                    iconScale = 1f
+                    android.util.Log.e("PinnedMessageIsland", "Animation error", e)
+                }
             }
             
             Icon(
@@ -108,7 +124,10 @@ private fun PinnedMessageContent(
                 tint = colorScheme.primary.copy(alpha = 0.8f),
                 modifier = Modifier
                     .size(18.dp)
-                    .graphicsLayer(scaleX = iconScale, scaleY = iconScale)
+                    .graphicsLayer(
+                        scaleX = if (iconScale.isFinite()) iconScale else 1f,
+                        scaleY = if (iconScale.isFinite()) iconScale else 1f
+                    )
             )
             
             Column(
