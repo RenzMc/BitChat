@@ -16,8 +16,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.launch
 import com.renchat.android.model.RenChatMessage
-import com.renchat.android.ui.ModerationUIComponents.ReportUserDialog
-import com.renchat.android.ui.CommunityReportManager.ReportReason
+// TODO: Import these when ModerationUIComponents and CommunityReportManager are implemented
+// import com.renchat.android.ui.ModerationUIComponents.ReportUserDialog
+// import com.renchat.android.ui.CommunityReportManager.ReportReason
 
 /**
  * User Action Sheet for selecting actions on a specific user (slap, hug, block)
@@ -181,26 +182,21 @@ fun ChatUserSheet(
         }
     }
     
-    // Report dialog
+    // Report dialog - TODO: Implement ReportUserDialog when ModerationUIComponents is available
     if (showReportDialog) {
         val peerID = viewModel.getPeerIDForNickname(targetNickname)
         if (peerID != null) {
-            ReportUserDialog(
-                targetNickname = targetNickname,
-                onReportSubmit = { reason, description ->
-                    viewModel.reportUser(
-                        targetPeerID = peerID,
-                        reason = reason,
-                        description = description,
-                        messageContent = selectedMessage?.content
-                    )
-                    showReportDialog = false
-                    onDismiss()
-                },
-                onDismiss = {
-                    showReportDialog = false
-                }
-            )
+            // Temporary simple report action until ReportUserDialog is implemented
+            LaunchedEffect(Unit) {
+                viewModel.reportUser(
+                    targetPeerID = peerID,
+                    reason = "inappropriate_behavior", // Default reason
+                    description = "User reported via action sheet",
+                    messageContent = selectedMessage?.content
+                )
+                showReportDialog = false
+                onDismiss()
+            }
         }
     }
 }

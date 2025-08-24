@@ -276,23 +276,6 @@ class DataManager(private val context: Context) {
         Log.d(TAG, "Cleared all chat locks")
     }
     
-    // MARK: - Geohash Channel Management
-    
-    fun saveLastGeohashChannel(channelData: String) {
-        prefs.edit().putString("last_geohash_channel", channelData).apply()
-        Log.d(TAG, "Saved last geohash channel: $channelData")
-    }
-    
-    fun loadLastGeohashChannel(): String? {
-        val channelData = prefs.getString("last_geohash_channel", null)
-        Log.d(TAG, "Loaded last geohash channel: $channelData")
-        return channelData
-    }
-    
-    fun clearLastGeohashChannel() {
-        prefs.edit().remove("last_geohash_channel").apply()
-        Log.d(TAG, "Cleared last geohash channel")
-    }
     
     // MARK: - Emergency Clear
     

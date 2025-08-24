@@ -927,7 +927,7 @@ If you find RenChat useful and want to support its development, consider:
 
 ⸻
 
-**© 2024 RenzMc | Released under Public Domain License**
+**© 2025 RenzMc | Released under Public Domain License**
 
 *"Privacy is not something that I'm merely entitled to, it's an absolute prerequisite."*
 

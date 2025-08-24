@@ -132,7 +132,6 @@ class ModerationManager(
     val moderationStats: StateFlow<ModerationStats> = _moderationStats.asStateFlow()
     
     private val actions = mutableListOf<ModerationAction>()
-    private val userProfiles = mutableMapOf<String, UserModerationProfile>()
     
     init {
         scope.launch {
@@ -198,12 +197,12 @@ class ModerationManager(
     /**
      * Handle bypass attempt with enhanced countermeasures
      */
-    private suspend fun handleBypassAttempt(peerID: String, banCheck: AntiBypassStorage.BanCheckResult) {
+    private suspend fun handleBypassAttempt(peerID: String, banCheck: Any) {
         try {
             // Apply escalated ban
             antiBypassStorage.applyPersistentBan(
                 peerID,
-                "Bypass attempt detected: ${banCheck.reason}",
+                "Bypass attempt detected",
                 72, // 72-hour ban
                 4, // Critical severity
                 true // Enable hardware ban
@@ -214,7 +213,7 @@ class ModerationManager(
                 id = generateActionId(),
                 targetPeerID = peerID,
                 actionType = ActionType.PERMANENT_BAN,
-                reason = "Ban bypass attempt: ${banCheck.banType}",
+                reason = "Ban bypass attempt detected",
                 timestamp = Date(),
                 isAutomated = true,
                 severity = ModerationSeverity.CRITICAL
@@ -447,7 +446,7 @@ class ModerationManager(
      * Get user's moderation profile
      */
     fun getUserProfile(peerID: String): UserModerationProfile {
-        return userProfiles[peerID] ?: UserModerationProfile(peerID)
+        return userProfiles.value[peerID] ?: UserModerationProfile(peerID)
     }
     
     /**
@@ -487,7 +486,7 @@ class ModerationManager(
      */
     fun getModerationSummary(): Map<String, Any> {
         val stats = getStats()
-        val highRiskUsers = userProfiles.values.filter { it.riskLevel in listOf(RiskLevel.HIGH, RiskLevel.CRITICAL) }
+        val highRiskUsers = userProfiles.value.values.filter { it.riskLevel in listOf(RiskLevel.HIGH, RiskLevel.CRITICAL) }
         val recentActions = actions.filter { it.timestamp.time > System.currentTimeMillis() - 24 * 60 * 60 * 1000 }
         
         return mapOf(
@@ -514,9 +513,11 @@ class ModerationManager(
     }
     
     private fun updateUserProfile(peerID: String, updateFn: (UserModerationProfile) -> UserModerationProfile) {
-        val currentProfile = userProfiles[peerID] ?: UserModerationProfile(peerID)
+        val currentProfiles = _userProfiles.value.toMutableMap()
+        val currentProfile = currentProfiles[peerID] ?: UserModerationProfile(peerID)
         val updatedProfile = updateFn(currentProfile)
-        userProfiles[peerID] = updatedProfile
+        currentProfiles[peerID] = updatedProfile
+        _userProfiles.value = currentProfiles
         
         updateFlows()
         saveModerationData()

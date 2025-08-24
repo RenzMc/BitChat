@@ -79,13 +79,13 @@ fun ChatScreen(viewModel: ChatViewModel, settingsManager: SettingsManager) {
     val canPinMessages = when {
         currentChannel?.startsWith("#group:") == true -> {
             // For groups, check if user has proper permissions
-            val channelName = currentChannel
+            val channelName = currentChannel!!
             val group = viewModel.groupManager.getGroupByChannel(channelName)
             group?.canPerformAction(viewModel.meshService.myPeerID, GroupAction.CHANGE_SETTINGS) ?: false
         }
         currentChannel != null -> {
             // For channels, check if user is creator
-            val channelName = currentChannel
+            val channelName = currentChannel!!
             viewModel.dataManager.isChannelCreator(channelName, viewModel.meshService.myPeerID)
         }
         else -> false

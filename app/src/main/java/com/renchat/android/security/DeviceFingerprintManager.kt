@@ -472,7 +472,7 @@ class DeviceFingerprintManager(private val context: Context) {
      */
     fun getFingerprintStats(): Map<String, Any> {
         return try {
-            mapOf(
+            mapOf<String, Any>(
                 "has_fingerprint" to securePrefs.contains(KEY_DEVICE_FINGERPRINT),
                 "has_hw_signature" to securePrefs.contains(KEY_HARDWARE_SIGNATURE),
                 "has_persistent_id" to securePrefs.contains(KEY_PERSISTENT_ID),
@@ -482,7 +482,7 @@ class DeviceFingerprintManager(private val context: Context) {
                 "is_dev_env" to isDevelopmentEnvironment()
             )
         } catch (e: Exception) {
-            mapOf("error" to e.message)
+            mapOf<String, Any>("error" to (e.message ?: "Unknown error"))
         }
     }
 }
