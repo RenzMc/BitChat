@@ -158,7 +158,7 @@ class SpamFilterManager(
         
         // Excessive emoji (more lenient)
         SpamPattern(
-            Regex("""([\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]){20,}"""), // Increased from 15
+            Regex("""([\uD83D\uDE00-\uD83D\uDE4F]|[\uD83C\uDF00-\uD83D\uDDFF]|[\uD83D\uDE80-\uD83D\uDEFF]|[\uD83C\uDDE0-\uD83C\uDDFF]){20,}"""), // Increased from 15
             SpamSeverity.MEDIUM,
             "Excessive emoji spam"
         ),

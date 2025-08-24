@@ -88,6 +88,14 @@ data class GroupInvite(
     fun getInviteUrl(): String {
         return "renchat://group/join?invite=$inviteCode"
     }
+    
+    fun getWebInviteUrl(): String {
+        return "https://renchat.app/group/join?invite=$inviteCode"
+    }
+    
+    fun getShareableInviteText(): String {
+        return "Join my RenChat group '$groupName'!\n\nApp link: ${getInviteUrl()}\nWeb link: ${getWebInviteUrl()}"
+    }
 }
 
 /**

@@ -187,7 +187,7 @@ class GroupCommandProcessor(
                 inviteInfo += "👥 Unlimited uses\n"
             }
             
-            inviteInfo += "🌐 Share: ${invite.getInviteUrl()}"
+            inviteInfo += "🌐 App: ${invite.getInviteUrl()}\n📱 Web: ${invite.getWebInviteUrl()}"
             
             showSuccessMessage(inviteInfo, sendMessageCallback)
         } else {
