@@ -586,7 +586,7 @@ class ModerationManager(
     
     private fun updateFlows() {
         _moderationActions.value = actions.sortedByDescending { it.timestamp }.take(100)
-        _userProfiles.value = userProfiles.toMap()
+        // userProfiles already updated via _userProfiles.value in updateUserProfile
         
         // Update stats
         val stats = ModerationStats(

@@ -16,9 +16,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.launch
 import com.renchat.android.model.RenChatMessage
-// TODO: Import these when ModerationUIComponents and CommunityReportManager are implemented
-// import com.renchat.android.ui.ModerationUIComponents.ReportUserDialog
-// import com.renchat.android.ui.CommunityReportManager.ReportReason
+import com.renchat.android.ui.CommunityReportManager.ReportReason
 
 /**
  * User Action Sheet for selecting actions on a specific user (slap, hug, block)
@@ -190,7 +188,7 @@ fun ChatUserSheet(
             LaunchedEffect(Unit) {
                 viewModel.reportUser(
                     targetPeerID = peerID,
-                    reason = "inappropriate_behavior", // Default reason
+                    reason = ReportReason.OTHER, // Default reason
                     description = "User reported via action sheet",
                     messageContent = selectedMessage?.content
                 )
@@ -202,7 +200,7 @@ fun ChatUserSheet(
 }
 
 @Composable
-private fun UserActionRow(
+fun UserActionRow(
     title: String,
     subtitle: String,
     titleColor: Color,
