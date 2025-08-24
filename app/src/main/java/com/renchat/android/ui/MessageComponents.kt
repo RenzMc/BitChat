@@ -130,28 +130,13 @@ fun MessageItem(
     // View-once state with proper key    
     var isViewOnceOpened by remember(message.id) { mutableStateOf(false) }    
         
-    // Pin/Unpin menu state - simplified like settings dialog
+    // Simple pin menu state like settings dialog
     var showPinMenu by remember(message.id) { mutableStateOf(false) }
         
     Box(modifier = Modifier.fillMaxWidth()) {    
         Row(    
             modifier = Modifier    
-                .fillMaxWidth()    
-                .let { modifier ->    
-                    if (canPinMessages && !message.isViewOnce) {    
-                        modifier.combinedClickable(    
-                            onLongClick = {     
-                                // Simple haptic feedback like settings
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                // Simple state change like settings gear
-                                showPinMenu = true
-                            },    
-                            onClick = { /* Do nothing on regular click */ }    
-                        )    
-                    } else {    
-                        modifier    
-                    }    
-                },    
+                .fillMaxWidth(),    
             horizontalArrangement = Arrangement.SpaceBetween,    
             verticalAlignment = Alignment.Top    
         ) {    
@@ -166,13 +151,8 @@ fun MessageItem(
                     Row(    
                         modifier = Modifier    
                             .clickable {    
-                                try {
-                                    isViewOnceOpened = true    
-                                    onViewOnceClick(message.id)    
-                                    // Mark as viewed after opening - we'll handle the popup separately    
-                                } catch (e: Exception) {
-                                    android.util.Log.e("MessageComponents", "Error opening view-once message: ${e.message}", e)
-                                }
+                                isViewOnceOpened = true    
+                                onViewOnceClick(message.id)    
                             }    
                             .background(    
                                 colorScheme.primary.copy(alpha = 0.1f),    
@@ -216,15 +196,33 @@ fun MessageItem(
                     )    
                 }    
                     
-                // Show pin icon for pinned messages    
+                // Show pin icon for pinned messages with simple click like settings gear
                 if (message.isPinned) {    
                     Icon(    
                         imageVector = Icons.Filled.PushPin,    
-                        contentDescription = "Pinned message",    
+                        contentDescription = "Pinned message - click to unpin",    
                         modifier = Modifier    
                             .size(14.dp)    
-                            .padding(end = 4.dp),    
+                            .padding(end = 4.dp)
+                            .clickable { 
+                                if (canPinMessages) {
+                                    showPinMenu = true 
+                                }
+                            },    
                         tint = Color(0xFF007AFF) // Blue color for pin icon    
+                    )    
+                } else if (canPinMessages && !message.isViewOnce) {
+                    // Add simple pin button for non-pinned messages
+                    Icon(    
+                        imageVector = Icons.Outlined.PushPin,    
+                        contentDescription = "Click to pin message",    
+                        modifier = Modifier    
+                            .size(14.dp)    
+                            .padding(end = 4.dp)
+                            .clickable { 
+                                showPinMenu = true 
+                            },    
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )    
                 }    
                     
