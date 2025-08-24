@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <group android:scaleX="0.8"
+           android:scaleY="0.8"
+           android:pivotX="54"
+           android:pivotY="54">
+        
+        <!-- Main "R" letter -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M35,25 L35,83 L42,83 L42,56 L55,56 C62,56 67,51 67,44 L67,37 C67,30 62,25 55,25 L35,25 Z M42,32 L55,32 C58,32 60,34 60,37 L60,44 C60,47 58,49 55,49 L42,49 L42,32 Z" />
+        
+        <!-- R diagonal leg -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M50,56 L65,83 L73,83 L55,56 Z" />
+        
+        <!-- Integrated Bluetooth symbol (right side) -->
+        <path
+            android:fillColor="#E3F2FD"
+            android:fillAlpha="0.9"
+            android:pathData="M75,35 L75,45 L80,40 L75,35 Z M75,63 L75,73 L80,68 L75,63 Z M73,30 L73,50 L85,40 L78,33 L85,26 L73,30 Z M73,58 L73,78 L85,68 L78,75 L85,82 L73,58 Z" />
+    </group>
+</vector>
