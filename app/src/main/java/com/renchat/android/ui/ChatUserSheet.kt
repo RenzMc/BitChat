@@ -100,7 +100,7 @@ fun ChatUserSheet(
                     // Only show user actions for other users' messages or when no message is selected
                     if (selectedMessage?.sender != viewModel.nickname.value) {
                         // Slap action
-                    item {
+                        item {
                         UserActionRow(
                             title = "slap $targetNickname",
                             subtitle = "send a playful slap message",
@@ -158,6 +158,7 @@ fun ChatUserSheet(
                                 onDismiss()
                             }
                         )
+                    }
                     }
                 }
                 
