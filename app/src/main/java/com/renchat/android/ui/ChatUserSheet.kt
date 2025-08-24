@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.launch
 import com.renchat.android.model.RenChatMessage
-import com.renchat.android.ui.CommunityReportManager.ReportReason
+import com.renchat.android.ui.ReportReason
 
 /**
  * User Action Sheet for selecting actions on a specific user (slap, hug, block)

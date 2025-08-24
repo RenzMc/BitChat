@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
+import com.renchat.android.ui.ReportReason
+import com.renchat.android.ui.UserModerationProfile
+import com.renchat.android.ui.RiskLevel
 
 /**
  * Data classes for moderation
@@ -57,23 +60,6 @@ data class ModerationStats(
     val manualActions: Int
 )
 
-data class UserModerationProfile(
-    val peerID: String,
-    val warningCount: Int = 0,
-    val banCount: Int = 0,
-    val reportsMade: Int = 0,
-    val reportsAgainst: Int = 0,
-    val trustScore: Double = 1.0,
-    val riskLevel: RiskLevel = RiskLevel.LOW,
-    val lastAction: Date? = null
-)
-
-enum class RiskLevel {
-    LOW,
-    MEDIUM,
-    HIGH,
-    CRITICAL
-}
 
 /**
  * Enhanced central moderation manager with anti-bypass detection

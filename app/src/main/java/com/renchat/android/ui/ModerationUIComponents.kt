@@ -10,16 +10,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.renchat.android.R
-import com.renchat.android.ui.CommunityReportManager.ReportReason
-import com.renchat.android.ui.ModerationManager.UserModerationProfile
-import com.renchat.android.ui.ModerationManager.RiskLevel
+import com.renchat.android.ui.ReportReason
+import com.renchat.android.ui.UserModerationProfile
+import com.renchat.android.ui.RiskLevel
+import com.renchat.android.ui.getDisplayName
+import com.renchat.android.ui.getDescription
 
 /**
  * UI components for moderation and community reporting
@@ -428,27 +428,3 @@ fun UserModerationMenu(
     }
 }
 
-// Extension functions for ReportReason
-fun ReportReason.getDisplayName(): String {
-    return when (this) {
-        ReportReason.SPAM -> "Spam"
-        ReportReason.HARASSMENT -> "Harassment"
-        ReportReason.INAPPROPRIATE_CONTENT -> "Inappropriate Content"
-        ReportReason.SCAM -> "Scam/Fraud"
-        ReportReason.HATE_SPEECH -> "Hate Speech"
-        ReportReason.IMPERSONATION -> "Impersonation"
-        ReportReason.OTHER -> "Other"
-    }
-}
-
-fun ReportReason.getDescription(): String {
-    return when (this) {
-        ReportReason.SPAM -> "Repeated unwanted messages or promotional content"
-        ReportReason.HARASSMENT -> "Targeting, bullying, or threatening behavior"
-        ReportReason.INAPPROPRIATE_CONTENT -> "Offensive, explicit, or unsuitable content"
-        ReportReason.SCAM -> "Attempting to defraud or steal from users"
-        ReportReason.HATE_SPEECH -> "Content promoting hatred or discrimination"
-        ReportReason.IMPERSONATION -> "Pretending to be someone else"
-        ReportReason.OTHER -> "Other violations not listed above"
-    }
-}

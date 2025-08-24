@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
+import com.renchat.android.ui.ReportReason
 
 /**
  * Data classes for community reporting
@@ -23,15 +24,6 @@ data class CommunityReport(
     val validationScore: Double = 0.0
 )
 
-enum class ReportReason {
-    SPAM,
-    HARASSMENT,
-    INAPPROPRIATE_CONTENT,
-    SCAM,
-    HATE_SPEECH,
-    IMPERSONATION,
-    OTHER
-}
 
 enum class ReportStatus {
     PENDING,
