@@ -6,6 +6,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+// Base font size for consistent scaling across the app (from BitChat 1.1.0)
+const val BASE_FONT_SIZE = 15 // sp - increased from 14sp for better readability
+
 // Modern typography for better readability - WhatsApp-inspired design
 val Typography = Typography(
     // Primary text for messages and content

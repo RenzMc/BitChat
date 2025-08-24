@@ -136,6 +136,10 @@ class ChatState {
     private val _geohashParticipantCounts = MutableLiveData<Map<String, Int>>(emptyMap())
     val geohashParticipantCounts: LiveData<Map<String, Int>> = _geohashParticipantCounts
     
+    // Pinned messages state for channels and groups
+    private val _pinnedMessages = MutableLiveData<Map<String, RenChatMessage>>(emptyMap())
+    val pinnedMessages: LiveData<Map<String, RenChatMessage>> = _pinnedMessages
+    
     // Unread state computed properties
     val hasUnreadChannels: MediatorLiveData<Boolean> = MediatorLiveData<Boolean>()
     val hasUnreadPrivateMessages: MediatorLiveData<Boolean> = MediatorLiveData<Boolean>()
@@ -179,6 +183,7 @@ class ChatState {
     fun getGeohashPeopleValue() = _geohashPeople.value ?: emptyList()
     fun getTeleportedGeoValue() = _teleportedGeo.value ?: emptySet()
     fun getGeohashParticipantCountsValue() = _geohashParticipantCounts.value ?: emptyMap()
+    fun getPinnedMessagesValue() = _pinnedMessages.value ?: emptyMap()
     
     // Setters for state updates
     fun setMessages(messages: List<RenChatMessage>) {
@@ -322,6 +327,20 @@ class ChatState {
     
     fun setGeohashParticipantCounts(counts: Map<String, Int>) {
         _geohashParticipantCounts.value = counts
+    }
+    
+    fun setPinnedMessages(pinnedMessages: Map<String, RenChatMessage>) {
+        _pinnedMessages.value = pinnedMessages
+    }
+    
+    fun setPinnedMessage(channelOrGroup: String, message: RenChatMessage?) {
+        val currentPinned = _pinnedMessages.value?.toMutableMap() ?: mutableMapOf()
+        if (message != null) {
+            currentPinned[channelOrGroup] = message
+        } else {
+            currentPinned.remove(channelOrGroup)
+        }
+        _pinnedMessages.value = currentPinned
     }
 
 }

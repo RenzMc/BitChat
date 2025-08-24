@@ -26,14 +26,23 @@ class NotificationManager(private val context: Context) {
     companion object {
         private const val TAG = "NotificationManager"
         private const val CHANNEL_ID = "RenChat_dm_notifications"
+        private const val GEOHASH_CHANNEL_ID = "RenChat_geohash_notifications"
+        private const val PROXIMITY_CHANNEL_ID = "RenChat_proximity_notifications"
         private const val GROUP_KEY_DM = "RenChat_dm_group"
+        private const val GROUP_KEY_GEOHASH = "RenChat_geohash_group"
         private const val NOTIFICATION_REQUEST_CODE = 1000
+        private const val GEOHASH_NOTIFICATION_REQUEST_CODE = 2000
+        private const val PROXIMITY_NOTIFICATION_REQUEST_CODE = 3000
         private const val SUMMARY_NOTIFICATION_ID = 999
+        private const val GEOHASH_SUMMARY_NOTIFICATION_ID = 998
+        private const val PROXIMITY_NOTIFICATION_ID = 997
         
         // Intent extras for notification handling
         const val EXTRA_OPEN_PRIVATE_CHAT = "open_private_chat"
+        const val EXTRA_OPEN_GEOHASH_CHAT = "open_geohash_chat"
         const val EXTRA_PEER_ID = "peer_id"
         const val EXTRA_SENDER_NICKNAME = "sender_nickname"
+        const val EXTRA_GEOHASH = "geohash"
     }
 
     private val notificationManager = NotificationManagerCompat.from(context)
@@ -41,6 +50,12 @@ class NotificationManager(private val context: Context) {
     
     // Track pending notifications per sender to enable grouping
     private val pendingNotifications = ConcurrentHashMap<String, MutableList<PendingNotification>>()
+    private val pendingGeohashNotifications = ConcurrentHashMap<String, MutableList<GeohashNotification>>()
+    
+    // Track previously notified nearby users to avoid spam
+    private val notifiedNearbyUsers = mutableSetOf<String>()
+    private var lastProximityNotificationTime = 0L
+    private val PROXIMITY_NOTIFICATION_COOLDOWN = 60000L // 1 minute cooldown
     
     // Track app background state
     @Volatile
@@ -49,6 +64,9 @@ class NotificationManager(private val context: Context) {
     // Track current view state
     @Volatile
     private var currentPrivateChatPeer: String? = null
+    
+    @Volatile
+    private var currentGeohash: String? = null
 
     data class PendingNotification(
         val senderPeerID: String,
@@ -56,12 +74,21 @@ class NotificationManager(private val context: Context) {
         val messageContent: String,
         val timestamp: Long
     )
+    
+    data class GeohashNotification(
+        val geohash: String,
+        val senderNickname: String,
+        val messageContent: String,
+        val timestamp: Long,
+        val isMention: Boolean = false,
+        val isFirstMessage: Boolean = false
+    )
 
     init {
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Direct Messages"
             val descriptionText = "Notifications for private messages from other users"
@@ -72,6 +99,27 @@ class NotificationManager(private val context: Context) {
                 setShowBadge(true)
             }
             systemNotificationManager.createNotificationChannel(channel)
+            
+            // Create geohash notification channel
+            val geohashName = "Geohash Messages"
+            val geohashDescription = "Notifications for mentions and messages in geohash channels"
+            val geohashChannel = NotificationChannel(GEOHASH_CHANNEL_ID, geohashName, importance).apply {
+                description = geohashDescription
+                enableVibration(true)
+                setShowBadge(true)
+            }
+            systemNotificationManager.createNotificationChannel(geohashChannel)
+            
+            // Create proximity notification channel
+            val proximityName = "Nearby Users"
+            val proximityDescription = "Notifications when new users are detected nearby"
+            val proximityImportance = NotificationManager.IMPORTANCE_DEFAULT // Less urgent than messages
+            val proximityChannel = NotificationChannel(PROXIMITY_CHANNEL_ID, proximityName, proximityImportance).apply {
+                description = proximityDescription
+                enableVibration(false) // Less intrusive
+                setShowBadge(false)
+            }
+            systemNotificationManager.createNotificationChannel(proximityChannel)
         }
     }
 
@@ -333,5 +381,89 @@ class NotificationManager(private val context: Context) {
                 appendLine("  $peerID: ${notifications.size} messages")
             }
         }
+    }
+    
+    /**
+     * Show proximity notification when new users are detected nearby
+     * Only shows when app is in background and respects cooldown period
+     */
+    fun showProximityNotification(nearbyUsers: List<String>) {
+        // Only show proximity notifications when app is in background
+        if (!isAppInBackground) {
+            Log.d(TAG, "Skipping proximity notification - app is in foreground")
+            return
+        }
+        
+        // Apply cooldown to prevent spam
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastProximityNotificationTime < PROXIMITY_NOTIFICATION_COOLDOWN) {
+            Log.d(TAG, "Skipping proximity notification - within cooldown period")
+            return
+        }
+        
+        // Filter out users we already notified about recently
+        val newUsers = nearbyUsers.filter { !notifiedNearbyUsers.contains(it) }
+        if (newUsers.isEmpty()) {
+            return
+        }
+        
+        // Update tracking
+        lastProximityNotificationTime = currentTime
+        notifiedNearbyUsers.addAll(newUsers)
+        
+        // Clear old tracked users periodically (keep last 20)
+        if (notifiedNearbyUsers.size > 20) {
+            val usersToRemove = notifiedNearbyUsers.take(notifiedNearbyUsers.size - 20)
+            notifiedNearbyUsers.removeAll(usersToRemove.toSet())
+        }
+        
+        // Create notification
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            PROXIMITY_NOTIFICATION_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val title = when (newUsers.size) {
+            1 -> "New user nearby"
+            else -> "${newUsers.size} users nearby"
+        }
+        
+        val content = when (newUsers.size) {
+            1 -> "${newUsers.first()} is nearby"
+            2 -> "${newUsers[0]} and ${newUsers[1]} are nearby"
+            else -> "${newUsers[0]}, ${newUsers[1]} and ${newUsers.size - 2} others are nearby"
+        }
+        
+        val notification = NotificationCompat.Builder(context, PROXIMITY_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .build()
+        
+        try {
+            if (notificationManager.areNotificationsEnabled()) {
+                notificationManager.notify(PROXIMITY_NOTIFICATION_ID, notification)
+                Log.d(TAG, "Showed proximity notification for users: $newUsers")
+            }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Failed to show proximity notification: $e")
+        }
+    }
+    
+    /**
+     * Clear proximity notification tracking when app comes to foreground
+     */
+    fun clearProximityTracking() {
+        notifiedNearbyUsers.clear()
+        Log.d(TAG, "Cleared proximity tracking")
     }
 }

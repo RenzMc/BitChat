@@ -37,7 +37,7 @@ class CommandProcessor(
         CommandSuggestion("/slap", emptyList(), "<nickname>", "slap someone with a trout"),
         CommandSuggestion("/topic", emptyList(), "[text]", "view or set channel topic"),
         CommandSuggestion("/unblock", emptyList(), "<nickname>", "unblock a peer"),
-        CommandSuggestion("/w", emptyList(), null, "see who's online")
+        CommandSuggestion("/w", listOf("/who"), null, "see who's online")
     )
     
     // MARK: - Command Processing
@@ -65,7 +65,7 @@ class CommandProcessor(
             "/j", "/join" -> handleJoinCommand(parts, myPeerID)
             "/l", "/leave", "/part" -> handleLeaveCommand(parts)
             "/m", "/msg" -> handleMessageCommand(parts, meshService)
-            "/w" -> handleWhoCommand(meshService, viewModel)
+            "/w", "/who" -> handleWhoCommand(meshService, viewModel)
             "/clear" -> handleClearCommand()
             "/pass" -> handlePassCommand(parts, myPeerID)
             "/block" -> handleBlockCommand(parts, meshService)

@@ -3,6 +3,27 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+
+## [0.8.0] - 2025-08-24
+
+### Added
+- **Enhanced View Once Message Button**: Redesigned view once toggle with circular icon featuring lock and number "1"
+  - Inactive state: Gray lock with white number "1"
+  - Active state: Same color as send button (orange for private/channels, green for public) with white number "1"
+  - Improved visual consistency with app theme
+- **Theme Settings in Header**: Added gear icon in main header to access theme selection
+  - Quick access to System, Light, Dark, and Dynamic (Material You) themes
+  - Convenient popup dialog for theme switching
+- **Password-Protected Channel Indicators**: Golden lock icon displays in channel headers
+  - Automatically shows when channel has password protection (set via `/pass [password]`)
+  - Clear visual indication of secure channels
+  - Enhanced channel security awareness
+
+### Improved
+- UI consistency across theme states and chat contexts
+- Visual feedback for secure messaging features
+- User experience for theme management and channel security
+
 ## [0.7.2] - 2025-07-20
 ### Fixed
 - fix: battery optimization screen content scrollable with fixed buttons

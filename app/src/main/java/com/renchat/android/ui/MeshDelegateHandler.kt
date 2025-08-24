@@ -21,7 +21,8 @@ class MeshDelegateHandler(
     private val coroutineScope: CoroutineScope,
     private val onHapticFeedback: () -> Unit,
     private val getMyPeerID: () -> String,
-    private val getMeshService: () -> BluetoothMeshService
+    private val getMeshService: () -> BluetoothMeshService,
+    private val moderationManager: ModerationManager? = null
 ) : BluetoothMeshDelegate {
 
     override fun didReceiveMessage(message: RenChatMessage) {
@@ -37,6 +38,14 @@ class MeshDelegateHandler(
             message.senderPeerID?.let { senderPeerID ->
                 if (privateChatManager.isPeerBlocked(senderPeerID)) {
                     return@launch
+                }
+                
+                // Check for spam from incoming message
+                moderationManager?.let { modManager ->
+                    if (modManager.processMessage(senderPeerID, message.content)) {
+                        // Message blocked by spam filter
+                        return@launch
+                    }
                 }
             }
             

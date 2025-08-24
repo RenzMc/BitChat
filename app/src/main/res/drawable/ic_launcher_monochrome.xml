@@ -1,15 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Simple R letter for monochrome icon -->
+    <!-- simple R outline for mask/monochrome -->
     <path
-        android:pathData="M35,30 L35,78 M35,30 L60,30 Q68,30 68,38 Q68,46 60,46 L35,46 M60,46 L68,78"
-        android:strokeColor="#000000"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"/>
-        
+        android:fillColor="#000000"
+        android:pathData="
+            M18,18
+            a16,16 0 0 1 16,-16
+            h44
+            a16,16 0 0 1 16,16
+            v32
+            c0,6 -6,16 -12,20
+            l-8,0
+            l-6,12
+            H34
+            Q28,94 22,88
+            Q18,84 16,78
+            z" />
 </vector>

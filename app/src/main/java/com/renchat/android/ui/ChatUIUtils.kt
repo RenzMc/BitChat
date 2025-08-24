@@ -6,6 +6,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.renchat.android.ui.theme.BASE_FONT_SIZE
 import com.renchat.android.model.RenChatMessage
 import com.renchat.android.mesh.BluetoothMeshService
 import androidx.compose.material3.ColorScheme
@@ -46,7 +47,7 @@ fun formatMessageAsAnnotatedString(
     val timestampColor = if (message.sender == "system") Color.Gray else colorScheme.primary.copy(alpha = 0.7f)
     builder.pushStyle(SpanStyle(
         color = timestampColor,
-        fontSize = 12.sp
+        fontSize = (BASE_FONT_SIZE - 3).sp
     ))
     builder.append("[${timeFormatter.format(message.timestamp)}] ")
     builder.pop()
@@ -64,7 +65,7 @@ fun formatMessageAsAnnotatedString(
         
         builder.pushStyle(SpanStyle(
             color = senderColor,
-            fontSize = 14.sp,
+            fontSize = (BASE_FONT_SIZE - 1).sp,
             fontWeight = FontWeight.Medium
         ))
         builder.append("<@${message.sender}> ")

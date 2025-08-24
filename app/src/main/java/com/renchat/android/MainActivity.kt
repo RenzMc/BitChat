@@ -39,6 +39,7 @@ import com.renchat.android.onboarding.PermissionExplanationScreen
 import com.renchat.android.onboarding.PermissionManager
 import com.renchat.android.ui.ChatScreen
 import com.renchat.android.ui.ChatViewModel
+import com.renchat.android.ui.SettingsManager
 import com.renchat.android.ui.theme.RenChatTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var bluetoothStatusManager: BluetoothStatusManager
     private lateinit var locationStatusManager: LocationStatusManager
     private lateinit var batteryOptimizationManager: BatteryOptimizationManager
+    private lateinit var settingsManager: SettingsManager
     
     // Core mesh service - managed at app level
     private lateinit var meshService: BluetoothMeshService
@@ -68,6 +70,8 @@ class MainActivity : ComponentActivity() {
         
         // Initialize permission management
         permissionManager = PermissionManager(this)
+        // Initialize settings manager
+        settingsManager = SettingsManager(this)
         // Initialize core mesh service first
         meshService = BluetoothMeshService(this)
         bluetoothStatusManager = BluetoothStatusManager(
@@ -96,7 +100,7 @@ class MainActivity : ComponentActivity() {
         )
         
         setContent {
-            RenChatTheme {
+            RenChatTheme(settingsManager = settingsManager) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -325,7 +329,7 @@ class MainActivity : ComponentActivity() {
 
                 // Add the callback - this will be automatically removed when the activity is destroyed
                 onBackPressedDispatcher.addCallback(this, backCallback)
-                ChatScreen(viewModel = chatViewModel)
+                ChatScreen(viewModel = chatViewModel, settingsManager = settingsManager)
             }
             
             OnboardingState.ERROR -> {

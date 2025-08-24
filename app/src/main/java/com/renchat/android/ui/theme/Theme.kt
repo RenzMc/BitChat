@@ -1,11 +1,16 @@
 package com.renchat.android.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.renchat.android.ui.SettingsManager
 
 // Modern WhatsApp-inspired dark theme colors
 private val DarkColorScheme = darkColorScheme(
@@ -54,10 +59,34 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun RenChatTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    settingsManager: SettingsManager? = null,
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
+    
+    // Determine if dynamic color is available and enabled
+    val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            settingsManager?.isDynamicColorEnabled() == true
+    
+    // Determine actual dark theme based on settings
+    val actualDarkTheme = settingsManager?.isDarkMode(darkTheme) ?: darkTheme
+    
     val colorScheme = when {
-        darkTheme -> DarkColorScheme
+        dynamicColor && actualDarkTheme -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                dynamicDarkColorScheme(context)
+            } else {
+                DarkColorScheme
+            }
+        }
+        dynamicColor && !actualDarkTheme -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                dynamicLightColorScheme(context)
+            } else {
+                LightColorScheme
+            }
+        }
+        actualDarkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 

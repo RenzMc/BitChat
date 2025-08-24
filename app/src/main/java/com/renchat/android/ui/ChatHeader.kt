@@ -199,6 +199,7 @@ fun ChatHeaderContent(
     currentChannel: String?,
     nickname: String,
     viewModel: ChatViewModel,
+    settingsManager: SettingsManager,
     onBackClick: () -> Unit,
     onSidebarClick: () -> Unit,
     onTripleClick: () -> Unit,
@@ -239,7 +240,8 @@ fun ChatHeaderContent(
                 channel = currentChannel,
                 onBackClick = onBackClick,
                 onLeaveChannel = { viewModel.leaveChannel(currentChannel) },
-                onSidebarClick = onSidebarClick
+                onSidebarClick = onSidebarClick,
+                isPasswordProtected = viewModel.isChannelPasswordProtected(currentChannel)
             )
         }
         else -> {
@@ -250,6 +252,7 @@ fun ChatHeaderContent(
                 onTitleClick = onShowAppInfo,
                 onTripleTitleClick = onTripleClick,
                 onSidebarClick = onSidebarClick,
+                settingsManager = settingsManager,
                 viewModel = viewModel
             )
         }
@@ -343,7 +346,8 @@ private fun ChannelHeader(
     channel: String,
     onBackClick: () -> Unit,
     onLeaveChannel: () -> Unit,
-    onSidebarClick: () -> Unit
+    onSidebarClick: () -> Unit,
+    isPasswordProtected: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
     
@@ -379,14 +383,29 @@ private fun ChannelHeader(
         }
         
         // Title - perfectly centered regardless of other elements
-        Text(
-            text = "channel: $channel",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color(0xFFFF9500), // Orange to match input field
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.Center)
                 .clickable { onSidebarClick() }
-        )
+        ) {
+            Text(
+                text = "channel: $channel",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color(0xFFFF9500) // Orange to match input field
+            )
+            
+            // Golden lock icon for password-protected channels
+            if (isPasswordProtected) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = "Password protected channel",
+                    modifier = Modifier.size(16.dp),
+                    tint = Color(0xFFFFD700) // Golden color
+                )
+            }
+        }
         
         // Leave button - positioned on the right
         TextButton(
@@ -409,6 +428,7 @@ private fun MainHeader(
     onTitleClick: () -> Unit,
     onTripleTitleClick: () -> Unit,
     onSidebarClick: () -> Unit,
+    settingsManager: SettingsManager,
     viewModel: ChatViewModel
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -417,6 +437,9 @@ private fun MainHeader(
     val hasUnreadChannels by viewModel.unreadChannelMessages.observeAsState(emptyMap())
     val hasUnreadPrivateMessages by viewModel.unreadPrivateMessages.observeAsState(emptySet())
     val isConnected by viewModel.isConnected.observeAsState(false)
+    
+    // Theme settings popup state
+    var showThemeDialog by remember { mutableStateOf(false) }
     
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -444,13 +467,91 @@ private fun MainHeader(
             )
         }
         
-        PeerCounter(
-            connectedPeers = connectedPeers.filter { it != viewModel.meshService.myPeerID },
-            joinedChannels = joinedChannels,
-            hasUnreadChannels = hasUnreadChannels,
-            hasUnreadPrivateMessages = hasUnreadPrivateMessages,
-            isConnected = isConnected,
-            onClick = onSidebarClick
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Settings gear icon
+            IconButton(
+                onClick = { showThemeDialog = true },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    modifier = Modifier.size(16.dp),
+                    tint = colorScheme.primary
+                )
+            }
+            
+            PeerCounter(
+                connectedPeers = connectedPeers.filter { it != viewModel.meshService.myPeerID },
+                joinedChannels = joinedChannels,
+                hasUnreadChannels = hasUnreadChannels,
+                hasUnreadPrivateMessages = hasUnreadPrivateMessages,
+                isConnected = isConnected,
+                onClick = onSidebarClick
+            )
+        }
+    }
+    
+    // Theme selection dialog
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            settingsManager = settingsManager,
+            onDismiss = { showThemeDialog = false }
         )
     }
+}
+
+@Composable
+private fun ThemeSelectionDialog(
+    settingsManager: SettingsManager,
+    onDismiss: () -> Unit
+) {
+    val currentTheme by settingsManager.themeMode
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Choose Theme",
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        text = {
+            Column {
+                SettingsManager.ThemeMode.values().forEach { theme ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                settingsManager.setThemeMode(theme)
+                                onDismiss()
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentTheme == theme,
+                            onClick = {
+                                settingsManager.setThemeMode(theme)
+                                onDismiss()
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = theme.displayName,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
 }

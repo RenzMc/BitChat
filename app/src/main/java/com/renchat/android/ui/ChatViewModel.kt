@@ -14,6 +14,7 @@ import com.renchat.android.protocol.RenChatPacket
 import com.renchat.android.nostr.NostrGeohashService
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import java.util.*
 import kotlin.random.Random
 
@@ -39,6 +40,11 @@ class ChatViewModel(
     private val channelManager = ChannelManager(state, messageManager, dataManager, viewModelScope)
     private val groupManager = GroupManager(state, messageManager, dataManager, viewModelScope)
     
+    // Enhanced moderation system with anti-bypass protection
+    private val spamFilterManager = SpamFilterManager(application.applicationContext, dataManager)
+    private val communityReportManager = CommunityReportManager(dataManager)
+    private val moderationManager = ModerationManager(application.applicationContext, spamFilterManager, communityReportManager, dataManager)
+    
     // Create Noise session delegate for clean dependency injection
     private val noiseSessionDelegate = object : NoiseSessionDelegate {
         override fun hasEstablishedSession(peerID: String): Boolean = meshService.hasEstablishedSession(peerID)
@@ -62,7 +68,8 @@ class ChatViewModel(
         coroutineScope = viewModelScope,
         onHapticFeedback = { ChatViewModelUtils.triggerHapticFeedback(application.applicationContext) },
         getMyPeerID = { meshService.myPeerID },
-        getMeshService = { meshService }
+        getMeshService = { meshService },
+        moderationManager = moderationManager
     )
     
     // Nostr and Geohash service - initialize singleton after meshDelegateHandler
@@ -113,6 +120,7 @@ class ChatViewModel(
     val geohashPeople: LiveData<List<com.renchat.android.model.GeoPerson>> = state.geohashPeople
     val teleportedGeo: LiveData<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: LiveData<Map<String, Int>> = state.geohashParticipantCounts
+    val pinnedMessages: LiveData<Map<String, RenChatMessage>> = state.pinnedMessages
     
     init {
         // Note: Mesh service delegate is now set by MainActivity
@@ -226,6 +234,232 @@ class ChatViewModel(
         meshService.sendMessage("left $channel")
     }
     
+    fun isChannelPasswordProtected(channel: String): Boolean {
+        return channelManager.isChannelPasswordProtected(channel)
+    }
+    
+    // MARK: - Moderation Management
+    
+    /**
+     * Submit a community report against a user
+     */
+    fun reportUser(
+        targetPeerID: String,
+        reason: ReportReason,
+        description: String,
+        messageContent: String? = null
+    ): String? {
+        return moderationManager.handleCommunityReport(
+            reporterPeerID = meshService.myPeerID,
+            targetPeerID = targetPeerID,
+            reason = reason,
+            description = description,
+            messageContent = messageContent
+        )
+    }
+    
+    /**
+     * Check if user is banned
+     */
+    fun isUserBanned(peerID: String): Boolean {
+        return spamFilterManager.isUserBanned(peerID)
+    }
+    
+    /**
+     * Get user's moderation profile
+     */
+    fun getUserModerationProfile(peerID: String): UserModerationProfile {
+        return moderationManager.getUserProfile(peerID)
+    }
+    
+    /**
+     * Get moderation statistics
+     */
+    fun getModerationStats(): ModerationStats {
+        return moderationManager.getStats()
+    }
+    
+    /**
+     * Manual moderation action (for admins/moderators)
+     */
+    fun takeModeratorAction(
+        targetPeerID: String,
+        actionType: ActionType,
+        reason: String,
+        severity: ModerationSeverity = ModerationSeverity.MEDIUM
+    ): Boolean {
+        return moderationManager.takeManualAction(
+            moderatorPeerID = meshService.myPeerID,
+            targetPeerID = targetPeerID,
+            actionType = actionType,
+            reason = reason,
+            severity = severity
+        )
+    }
+    
+    /**
+     * Get user's recent moderation actions
+     */
+    fun getUserModerationActions(peerID: String): List<ModerationAction> {
+        return moderationManager.getUserActions(peerID)
+    }
+    
+    // MARK: - Pin Message Management
+    
+    /**
+     * Pin a message in current channel or group
+     */
+    fun pinMessage(message: RenChatMessage): Boolean {
+        val currentChannel = state.getCurrentChannelValue() ?: return false
+        val myPeerID = meshService.myPeerID
+        
+        // Check permissions for groups
+        if (currentChannel.startsWith("#group:")) {
+            val group = groupManager.getGroupByChannel(currentChannel)
+            if (group == null || !group.canPerformAction(myPeerID, GroupAction.CHANGE_SETTINGS)) {
+                Log.w("ChatViewModel", "Insufficient permissions to pin message in group")
+                return false
+            }
+        } else {
+            // For regular channels, check if user is channel creator
+            if (!dataManager.isChannelCreator(currentChannel, myPeerID)) {
+                Log.w("ChatViewModel", "Insufficient permissions to pin message in channel")
+                return false
+            }
+        }
+        
+        // Update message with pin information
+        val pinnedMessage = message.copy(
+            isPinned = true,
+            pinnedBy = myPeerID,
+            pinnedAt = Date()
+        )
+        
+        // Update the message in the appropriate store
+        updateMessageInStore(pinnedMessage)
+        
+        // Set as pinned message for this channel/group
+        state.setPinnedMessage(currentChannel, pinnedMessage)
+        
+        // Send pin notification to channel/group
+        val pinMessage = RenChatMessage(
+            sender = "system",
+            content = "${state.getNicknameValue() ?: myPeerID} pinned a message",
+            timestamp = Date(),
+            channel = currentChannel
+        )
+        
+        if (currentChannel.startsWith("#group:")) {
+            groupManager.addGroupMessage(currentChannel, pinMessage, myPeerID)
+        } else {
+            channelManager.addChannelMessage(currentChannel, pinMessage, myPeerID)
+        }
+        
+        Log.i("ChatViewModel", "Message pinned in $currentChannel by $myPeerID")
+        return true
+    }
+    
+    /**
+     * Unpin message in current channel or group
+     */
+    fun unpinMessage(): Boolean {
+        val currentChannel = state.getCurrentChannelValue() ?: return false
+        val myPeerID = meshService.myPeerID
+        
+        // Check permissions
+        if (currentChannel.startsWith("#group:")) {
+            val group = groupManager.getGroupByChannel(currentChannel)
+            if (group == null || !group.canPerformAction(myPeerID, GroupAction.CHANGE_SETTINGS)) {
+                Log.w("ChatViewModel", "Insufficient permissions to unpin message in group")
+                return false
+            }
+        } else {
+            if (!dataManager.isChannelCreator(currentChannel, myPeerID)) {
+                Log.w("ChatViewModel", "Insufficient permissions to unpin message in channel")
+                return false
+            }
+        }
+        
+        // Get current pinned message
+        val pinnedMessage = state.getPinnedMessagesValue()[currentChannel]
+        if (pinnedMessage == null) {
+            Log.w("ChatViewModel", "No message is currently pinned in $currentChannel")
+            return false
+        }
+        
+        // Update message to remove pin
+        val unpinnedMessage = pinnedMessage.copy(
+            isPinned = false,
+            pinnedBy = null,
+            pinnedAt = null
+        )
+        
+        updateMessageInStore(unpinnedMessage)
+        
+        // Remove from pinned messages
+        state.setPinnedMessage(currentChannel, null)
+        
+        // Send unpin notification
+        val unpinMessage = RenChatMessage(
+            sender = "system",
+            content = "${state.getNicknameValue() ?: myPeerID} unpinned a message",
+            timestamp = Date(),
+            channel = currentChannel
+        )
+        
+        if (currentChannel.startsWith("#group:")) {
+            groupManager.addGroupMessage(currentChannel, unpinMessage, myPeerID)
+        } else {
+            channelManager.addChannelMessage(currentChannel, unpinMessage, myPeerID)
+        }
+        
+        Log.i("ChatViewModel", "Message unpinned in $currentChannel by $myPeerID")
+        return true
+    }
+    
+    /**
+     * Get pinned message for current channel or group
+     */
+    fun getCurrentPinnedMessage(): RenChatMessage? {
+        val currentChannel = state.getCurrentChannelValue() ?: return null
+        return state.getPinnedMessagesValue()[currentChannel]
+    }
+    
+    /**
+     * Update message in appropriate storage
+     */
+    private fun updateMessageInStore(message: RenChatMessage) {
+        val channelName = message.channel
+        
+        if (channelName != null) {
+            // Update in channel messages
+            val currentChannelMessages = state.getChannelMessagesValue().toMutableMap()
+            val channelMessages = currentChannelMessages[channelName]?.toMutableList() ?: return
+            
+            val messageIndex = channelMessages.indexOfFirst { it.id == message.id }
+            if (messageIndex >= 0) {
+                channelMessages[messageIndex] = message
+                currentChannelMessages[channelName] = channelMessages
+                state.setChannelMessages(currentChannelMessages)
+            }
+        } else {
+            // Update in main messages
+            val currentMessages = state.getMessagesValue().toMutableList()
+            val messageIndex = currentMessages.indexOfFirst { it.id == message.id }
+            if (messageIndex >= 0) {
+                currentMessages[messageIndex] = message
+                state.setMessages(currentMessages)
+            }
+        }
+    }
+    
+    /**
+     * Check if user should be flagged for review
+     */
+    fun shouldUserBeFlagged(peerID: String): Boolean {
+        return moderationManager.shouldFlagForReview(peerID)
+    }
+    
     // MARK: - Group Management (delegated)
     
     fun createGroup(name: String, description: String? = null): Group? {
@@ -279,6 +513,34 @@ class ChatViewModel(
     fun sendMessage(content: String) {
         if (content.isEmpty()) return
         
+        // Enhanced spam and bypass detection with async processing
+        viewModelScope.launch {
+            try {
+                val isBlocked = moderationManager.processMessage(meshService.myPeerID, content)
+                if (isBlocked) {
+                    Log.w(TAG, "Message blocked by enhanced spam/bypass filter")
+                    // TODO: Could show user-friendly warning in UI here
+                    return@launch
+                }
+                
+                // Continue with message processing on main thread
+                launch(Dispatchers.Main) {
+                    processSendMessageAfterFiltering(content)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in spam filtering, allowing message to proceed", e)
+                // On error, allow message to proceed to avoid blocking legitimate users
+                launch(Dispatchers.Main) {
+                    processSendMessageAfterFiltering(content)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Process message sending after spam filtering is complete
+     */
+    private fun processSendMessageAfterFiltering(content: String) {
         // Check for commands
         if (content.startsWith("/")) {
             commandProcessor.processCommand(content, meshService, meshService.myPeerID, { messageContent, mentions, channel ->

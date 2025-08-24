@@ -26,7 +26,7 @@ import androidx.compose.ui.zIndex
  * - ChatUIUtils: Utility functions for formatting and colors
  */
 @Composable
-fun ChatScreen(viewModel: ChatViewModel) {
+fun ChatScreen(viewModel: ChatViewModel, settingsManager: SettingsManager) {
     val colorScheme = MaterialTheme.colorScheme
     val messages by viewModel.messages.observeAsState(emptyList())
     val connectedPeers by viewModel.connectedPeers.observeAsState(emptyList())
@@ -46,6 +46,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val showAppInfo by viewModel.showAppInfo.observeAsState(false)
     val isViewOnceEnabled by viewModel.isViewOnceEnabled.observeAsState(false)
     val viewedMessages by viewModel.viewedMessages.observeAsState(emptySet())
+    val pinnedMessages by viewModel.pinnedMessages.observeAsState(emptyMap())
 
     var messageText by remember { mutableStateOf(TextFieldValue("")) }
     var showPasswordPrompt by remember { mutableStateOf(false) }
@@ -66,6 +67,29 @@ fun ChatScreen(viewModel: ChatViewModel) {
         currentChannel != null -> channelMessages[currentChannel] ?: emptyList()
         else -> messages
     }
+    
+    // Get pinned message for current context
+    val currentPinnedMessage = when {
+        currentChannel != null -> pinnedMessages[currentChannel]
+        else -> null
+    }
+    
+    // Check if current user can pin messages
+    val canPinMessages = when {
+        currentChannel?.startsWith("#group:") == true -> {
+            // For groups, check if user has proper permissions
+            val group = viewModel.groupManager.getGroupByChannel(currentChannel)
+            group?.canPerformAction(viewModel.meshService.myPeerID, viewModel.groupManager.GroupAction.CHANGE_SETTINGS) ?: false
+        }
+        currentChannel != null -> {
+            // For channels, check if user is creator
+            viewModel.dataManager.isChannelCreator(currentChannel, viewModel.meshService.myPeerID)
+        }
+        else -> false
+    }
+    
+    // State for scroll-to-pinned trigger
+    var scrollTrigger by remember { mutableStateOf(0) }
 
     // Use WindowInsets to handle keyboard properly
     Box(modifier = Modifier.fillMaxSize()) {
@@ -80,6 +104,17 @@ fun ChatScreen(viewModel: ChatViewModel) {
         ) {
             // Header spacer - creates space for the floating header
             Spacer(modifier = Modifier.height(headerHeight))
+            
+            // Pinned message island below header
+            PinnedMessageIsland(
+                pinnedMessage = currentPinnedMessage,
+                onPinnedMessageClick = {
+                    currentPinnedMessage?.let { pinnedMsg ->
+                        // Trigger scroll to pinned message
+                        scrollTrigger++
+                    }
+                }
+            )
 
             // Messages area - takes up available space, will compress when keyboard appears
             MessagesList(
@@ -88,6 +123,19 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 meshService = viewModel.meshService,
                 viewedMessages = viewedMessages,
                 onMessageViewed = { messageId -> viewModel.markMessageAsViewed(messageId) },
+                onViewOnceClick = { messageId -> 
+                    // Handle view once message click - could add sound effect, haptic feedback etc
+                    android.util.Log.d("ViewOnce", "Opening view-once message: $messageId")
+                },
+                scrollToMessageId = currentPinnedMessage?.id,
+                scrollTrigger = scrollTrigger,
+                onPinMessage = { message ->
+                    viewModel.pinMessage(message)
+                },
+                onUnpinMessage = {
+                    viewModel.unpinMessage()
+                },
+                canPinMessages = canPinMessages,
                 modifier = Modifier.weight(1f)
             )
             // Input area - stays at bottom
@@ -138,6 +186,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
             currentChannel = currentChannel,
             nickname = nickname,
             viewModel = viewModel,
+            settingsManager = settingsManager,
             colorScheme = colorScheme,
             onSidebarToggle = { viewModel.showSidebar() },
             onShowAppInfo = { viewModel.showAppInfo() },
@@ -277,6 +326,7 @@ private fun ChatFloatingHeader(
     currentChannel: String?,
     nickname: String,
     viewModel: ChatViewModel,
+    settingsManager: SettingsManager,
     colorScheme: ColorScheme,
     onSidebarToggle: () -> Unit,
     onShowAppInfo: () -> Unit,
@@ -298,6 +348,7 @@ private fun ChatFloatingHeader(
                     currentChannel = currentChannel,
                     nickname = nickname,
                     viewModel = viewModel,
+                    settingsManager = settingsManager,
                     onBackClick = {
                         when {
                             selectedPrivatePeer != null -> viewModel.endPrivateChat()

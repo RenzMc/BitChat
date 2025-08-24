@@ -176,6 +176,8 @@ fun MessageInput(
         ViewOnceToggleButton(
             isEnabled = isViewOnceEnabled,
             onClick = onViewOnceToggle,
+            selectedPrivatePeer = selectedPrivatePeer,
+            currentChannel = currentChannel,
             modifier = Modifier.size(32.dp)
         )
         
@@ -430,9 +432,21 @@ fun MentionSuggestionItem(
 fun ViewOnceToggleButton(
     isEnabled: Boolean,
     onClick: () -> Unit,
+    selectedPrivatePeer: String? = null,
+    currentChannel: String? = null,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    
+    // Get send button color logic to match active state
+    val activeColor = if (selectedPrivatePeer != null || currentChannel != null) {
+        // Orange for both private messages and channels when enabled
+        Color(0xFFFF9500)
+    } else if (colorScheme.background == Color.Black) {
+        Color(0xFF00FF00) // Bright green for dark theme
+    } else {
+        Color(0xFF008000) // Dark green for light theme
+    }
     
     IconButton(
         onClick = onClick,
@@ -443,24 +457,38 @@ fun ViewOnceToggleButton(
                 .size(30.dp)
                 .background(
                     color = if (isEnabled) {
-                        Color(0xFF00C853).copy(alpha = 0.75f) // Bright green when enabled
+                        activeColor.copy(alpha = 0.75f) // Same color as send button when enabled
                     } else {
-                        colorScheme.onSurface.copy(alpha = 0.3f) // Muted grey when disabled
+                        Color.Gray.copy(alpha = 0.6f) // Gray when disabled
                     },
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = if (isEnabled) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                contentDescription = if (isEnabled) "View once enabled" else "View once disabled",
-                modifier = Modifier.size(16.dp),
-                tint = if (isEnabled) {
-                    Color.Black // Black lock on green background
-                } else {
-                    colorScheme.onSurface.copy(alpha = 0.5f) // Muted grey lock
-                }
-            )
+            // Stack lock icon and number "1"
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = if (isEnabled) "View once enabled" else "View once disabled",
+                    modifier = Modifier.size(14.dp),
+                    tint = if (isEnabled) {
+                        Color.Black // Black lock on colored background when active
+                    } else {
+                        Color.Gray // Gray lock when inactive
+                    }
+                )
+                
+                // Number "1" positioned inside the lock
+                Text(
+                    text = "1",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color.White, // Always white as requested
+                    modifier = Modifier.offset(y = 2.dp) // Slight offset to center in lock
+                )
+            }
         }
     }
 }

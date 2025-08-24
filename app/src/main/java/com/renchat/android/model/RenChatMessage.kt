@@ -61,7 +61,10 @@ data class RenChatMessage(
     val isEncrypted: Boolean = false,
     val deliveryStatus: DeliveryStatus? = null,
     val isViewOnce: Boolean = false,
-    val viewedBy: Set<String> = emptySet()
+    val viewedBy: Set<String> = emptySet(),
+    val isPinned: Boolean = false,
+    val pinnedBy: String? = null,
+    val pinnedAt: Date? = null
 ) : Parcelable {
 
     /**
@@ -93,6 +96,9 @@ data class RenChatMessage(
             var flags2: UByte = 0u
             if (isViewOnce) flags2 = flags2 or 0x01u
             if (viewedBy.isNotEmpty()) flags2 = flags2 or 0x02u
+            if (isPinned) flags2 = flags2 or 0x04u
+            if (pinnedBy != null) flags2 = flags2 or 0x08u
+            if (pinnedAt != null) flags2 = flags2 or 0x10u
 
             buffer.put(flags.toByte())
             buffer.put(flags2.toByte())
@@ -168,6 +174,18 @@ data class RenChatMessage(
                     buffer.put(peerBytes.take(255).toByteArray())
                 }
             }
+            
+            // PinnedBy field
+            pinnedBy?.let { pinnerID ->
+                val pinnerBytes = pinnerID.toByteArray(Charsets.UTF_8)
+                buffer.put(minOf(pinnerBytes.size, 255).toByte())
+                buffer.put(pinnerBytes.take(255).toByteArray())
+            }
+            
+            // PinnedAt timestamp
+            pinnedAt?.let { pinTimestamp ->
+                buffer.putLong(pinTimestamp.time)
+            }
 
             val result = ByteArray(buffer.position())
             buffer.rewind()
@@ -204,6 +222,9 @@ data class RenChatMessage(
                 val flags2 = buffer.get().toUByte()
                 val isViewOnce = (flags2 and 0x01u) != 0u.toUByte()
                 val hasViewedBy = (flags2 and 0x02u) != 0u.toUByte()
+                val isPinned = (flags2 and 0x04u) != 0u.toUByte()
+                val hasPinnedBy = (flags2 and 0x08u) != 0u.toUByte()
+                val hasPinnedAt = (flags2 and 0x10u) != 0u.toUByte()
 
                 // Timestamp
                 val timestampMillis = buffer.getLong()
@@ -313,6 +334,24 @@ data class RenChatMessage(
                     }
                     viewedBySet
                 } else emptySet()
+                
+                // PinnedBy field
+                val pinnedBy = if (hasPinnedBy && buffer.hasRemaining()) {
+                    val length = buffer.get().toInt() and 0xFF
+                    if (buffer.remaining() >= length) {
+                        val bytes = ByteArray(length)
+                        buffer.get(bytes)
+                        String(bytes, Charsets.UTF_8)
+                    } else null
+                } else null
+                
+                // PinnedAt timestamp
+                val pinnedAt = if (hasPinnedAt && buffer.hasRemaining()) {
+                    if (buffer.remaining() >= 8) {
+                        val pinnedTimestamp = buffer.getLong()
+                        Date(pinnedTimestamp)
+                    } else null
+                } else null
 
                 return RenChatMessage(
                     id = id,
@@ -329,7 +368,10 @@ data class RenChatMessage(
                     encryptedContent = encryptedContent,
                     isEncrypted = isEncrypted,
                     isViewOnce = isViewOnce,
-                    viewedBy = viewedBy
+                    viewedBy = viewedBy,
+                    isPinned = isPinned,
+                    pinnedBy = pinnedBy,
+                    pinnedAt = pinnedAt
                 )
 
             } catch (e: Exception) {
@@ -363,6 +405,9 @@ data class RenChatMessage(
         if (deliveryStatus != other.deliveryStatus) return false
         if (isViewOnce != other.isViewOnce) return false
         if (viewedBy != other.viewedBy) return false
+        if (isPinned != other.isPinned) return false
+        if (pinnedBy != other.pinnedBy) return false
+        if (pinnedAt != other.pinnedAt) return false
 
         return true
     }
@@ -384,6 +429,9 @@ data class RenChatMessage(
         result = 31 * result + (deliveryStatus?.hashCode() ?: 0)
         result = 31 * result + isViewOnce.hashCode()
         result = 31 * result + viewedBy.hashCode()
+        result = 31 * result + isPinned.hashCode()
+        result = 31 * result + (pinnedBy?.hashCode() ?: 0)
+        result = 31 * result + (pinnedAt?.hashCode() ?: 0)
         return result
     }
 }
