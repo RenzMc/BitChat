@@ -495,24 +495,6 @@ class ChatViewModel(
         return commandProcessor.selectMentionSuggestion(nickname, currentText)
     }
     
-    // MARK: - View Once Management
-    
-    fun toggleViewOnce() {
-        val currentEnabled = state.getIsViewOnceEnabledValue()
-        state.setIsViewOnceEnabled(!currentEnabled)
-    }
-    
-    fun viewOnceMessage(message: BitchatMessage) {
-        state.setViewOnceMessage(message)
-        state.setShowViewOncePopup(true)
-        // Mark the message as viewed
-        state.markMessageAsViewed(message.id)
-    }
-    
-    fun dismissViewOncePopup() {
-        state.setShowViewOncePopup(false)
-        state.setViewOnceMessage(null)
-    }
     
     // MARK: - BluetoothMeshDelegate Implementation (delegated)
     
