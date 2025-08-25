@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
@@ -27,6 +28,7 @@ import com.renchat.android.model.GroupAction
  * - DialogComponents: Password prompts and modals
  * - ChatUIUtils: Utility functions for formatting and colors
  */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(viewModel: ChatViewModel, settingsManager: SettingsManager) {
     val colorScheme = MaterialTheme.colorScheme
@@ -122,6 +124,7 @@ fun ChatScreen(viewModel: ChatViewModel, settingsManager: SettingsManager) {
 
             // Messages area - takes up available space, will compress when keyboard appears
             // Disable overscroll to prevent zoom-like effects on Android 12+
+            @OptIn(ExperimentalFoundationApi::class)
             CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
                 MessagesList(
                 messages = displayMessages,

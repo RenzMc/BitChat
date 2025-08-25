@@ -15,48 +15,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.renchat.android.ui.SettingsManager
 
-// Modern WhatsApp-inspired dark theme colors
+// BitChat 1.2.0 exact dark theme colors
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF00BFA5),        // Teal accent (WhatsApp-like)
-    onPrimary = Color.White,
-    secondary = Color(0xFF1976D2),      // Blue accent
-    onSecondary = Color.White,
-    tertiary = Color(0xFF7C4DFF),       // Purple accent
-    onTertiary = Color.White,
-    background = Color(0xFF0F1419),     // Deep dark background
-    onBackground = Color(0xFFE1E5E9),   // Light text on dark
-    surface = Color(0xFF1C2128),        // Dark surface (cards, etc)
-    onSurface = Color(0xFFE1E5E9),      // Light text on surface
-    surfaceVariant = Color(0xFF2B3137), // Darker surface variant
-    onSurfaceVariant = Color(0xFFB3B9C0), // Muted text
-    outline = Color(0xFF3D4348),        // Border colors
-    outlineVariant = Color(0xFF2B3137),
-    error = Color(0xFFFF5252),          // Error red
-    onError = Color.White,
-    errorContainer = Color(0xFF3D1A1A),
-    onErrorContainer = Color(0xFFFFB3B3)
+    primary = Color(0xFF39FF14),        // Bright green (terminal-like)
+    onPrimary = Color.Black,
+    secondary = Color(0xFF2ECB10),      // Darker green
+    onSecondary = Color.Black,
+    background = Color.Black,
+    onBackground = Color(0xFF39FF14),   // Green on black
+    surface = Color(0xFF111111),        // Very dark gray
+    onSurface = Color(0xFF39FF14),      // Green text
+    error = Color(0xFFFF5555),          // Red for errors
+    onError = Color.Black
 )
 
-// Modern WhatsApp-inspired light theme colors
+// BitChat 1.2.0 exact light theme colors
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF00BFA5),        // Teal accent (WhatsApp-like)
+    primary = Color(0xFF008000),        // Dark green
     onPrimary = Color.White,
-    secondary = Color(0xFF1976D2),      // Blue accent
+    secondary = Color(0xFF006600),      // Even darker green
     onSecondary = Color.White,
-    tertiary = Color(0xFF7C4DFF),       // Purple accent
-    onTertiary = Color.White,
-    background = Color(0xFFFFFFFF),     // Pure white background
-    onBackground = Color(0xFF1C1C1E),   // Dark text on light
-    surface = Color(0xFFF5F5F5),        // Light gray surface
-    onSurface = Color(0xFF1C1C1E),      // Dark text on surface
-    surfaceVariant = Color(0xFFEEEEEE), // Lighter surface variant
-    onSurfaceVariant = Color(0xFF666666), // Muted text
-    outline = Color(0xFFE0E0E0),        // Light border colors
-    outlineVariant = Color(0xFFF0F0F0),
-    error = Color(0xFFD32F2F),          // Error red
-    onError = Color.White,
-    errorContainer = Color(0xFFFFE5E5),
-    onErrorContainer = Color(0xFF8C1D1D)
+    background = Color.White,
+    onBackground = Color(0xFF008000),   // Dark green on white
+    surface = Color(0xFFF8F8F8),        // Very light gray
+    onSurface = Color(0xFF008000),      // Dark green text
+    error = Color(0xFFCC0000),          // Dark red for errors
+    onError = Color.White
 )
 
 @Composable

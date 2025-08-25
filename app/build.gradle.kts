@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.gms.location)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.biometric)
 
     testImplementation(libs.bundles.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))

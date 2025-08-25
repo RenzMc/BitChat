@@ -78,7 +78,7 @@ fun AboutSheet(
                             verticalAlignment = Alignment.Bottom
                         ) {
                             Text(
-                                text = "RenChat",
+                                text = "renchat",
                                 fontSize = 18.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Medium,
