@@ -76,7 +76,7 @@ class GeohashLocationFilter private constructor(private val context: Context) {
      */
     fun shouldShowGeohashNotification(geohash: String, senderLocation: String? = null): Boolean {
         // Always filter problematic geohashes if we have user location
-        if (lastKnownLocation != null && geohash.startsWith(PROBLEMATIC_GEOHASHES.any { geohash.startsWith(it) })) {
+        if (lastKnownLocation != null && PROBLEMATIC_GEOHASHES.any { geohash.startsWith(it) }) {
             val geohashLocation = decodeGeohashToLocation(geohash)
             if (geohashLocation != null) {
                 val distance = calculateDistance(lastKnownLocation!!, geohashLocation)
@@ -105,7 +105,7 @@ class GeohashLocationFilter private constructor(private val context: Context) {
      */
     private fun decodeGeohashToLocation(geohash: String): Location? {
         return try {
-            val (lat, lon) = Geohash.decode(geohash)
+            val (lat, lon) = Geohash.decodeToCenter(geohash)
             val location = Location("geohash")
             location.latitude = lat
             location.longitude = lon

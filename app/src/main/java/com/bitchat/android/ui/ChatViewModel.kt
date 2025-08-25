@@ -156,7 +156,7 @@ class ChatViewModel(
         nostrGeohashService.initializeNostrIntegration()
         
         // Initialize anti-spam protection for incoming messages
-        meshDelegateHandler.initializeAntiSpam(application.applicationContext)
+        meshDelegateHandler.initializeAntiSpam(getApplication<Application>().applicationContext)
         
         // Note: Mesh service is now started by MainActivity
         
