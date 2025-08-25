@@ -1,0 +1,135 @@
+name: Release
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK and Build Tools
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 35
+          build-tools: 35.0.0
+          components: |
+            platform-tools
+            build-tools;35.0.0
+            platforms;android-35
+
+      - name: Show installed SDK info
+        run: |
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls -la $ANDROID_SDK_ROOT/build-tools || true
+          which zipalign || true
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: wrapper
+
+      - name: Cache Gradle files
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Grant execute permission for Gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          BUILD_TOOLS_VERSION: 35.0.0
+
+      - name: Find and rename signed APK to final name
+        run: |
+          set -e
+          RELEASE_DIR=app/build/outputs/apk/release
+          echo "Listing release dir before rename:"
+          ls -la $RELEASE_DIR || true
+
+          SIGNED_APK=$(ls $RELEASE_DIR/*-signed.apk 2>/dev/null | head -n 1 || true)
+          if [ -z "$SIGNED_APK" ]; then
+            echo "No '*-signed.apk' found. Trying '*-unsigned-signed.apk' patterns as fallback..."
+            SIGNED_APK=$(ls $RELEASE_DIR/*unsigned*signed*.apk 2>/dev/null | head -n 1 || true)
+          fi
+
+          if [ -z "$SIGNED_APK" ]; then
+            echo "ERROR: No signed APK found in $RELEASE_DIR"
+            echo "Contents:"
+            ls -la $RELEASE_DIR || true
+            exit 1
+          fi
+
+          echo "Found signed APK: $SIGNED_APK"
+          DEST="$RELEASE_DIR/RenChat-${{ github.ref_name }}.apk"
+          mv "$SIGNED_APK" "$DEST"
+          echo "Renamed to: $DEST"
+
+      - name: Cleanup non-final APKs (optional)
+        run: |
+          RELEASE_DIR=app/build/outputs/apk/release
+          # keep only the final RenChat-*.apk (to avoid uploading other apk files)
+          find $RELEASE_DIR -maxdepth 1 -type f -name '*.apk' ! -name "RenChat-*.apk" -print -delete || true
+          echo "After cleanup:"
+          ls -la $RELEASE_DIR || true
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RenChat-release-apk-${{ github.ref_name }}
+          path: app/build/outputs/apk/release/RenChat-*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: RenChat-release-apk-${{ github.ref_name }}
+          path: .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: RenChat-*.apk
+          name: Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
