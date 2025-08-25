@@ -108,6 +108,10 @@ class ChatViewModel(
     val geohashPeople: LiveData<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: LiveData<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: LiveData<Map<String, Int>> = state.geohashParticipantCounts
+    val isViewOnceEnabled: LiveData<Boolean> = state.isViewOnceEnabled
+    val showViewOncePopup: LiveData<Boolean> = state.showViewOncePopup
+    val viewOnceMessage: LiveData<BitchatMessage?> = state.viewOnceMessage
+    val viewedOnceMessages: LiveData<Set<String>> = state.viewedOnceMessages
     
     init {
         // Note: Mesh service delegate is now set by MainActivity
@@ -489,6 +493,25 @@ class ChatViewModel(
     
     fun selectMentionSuggestion(nickname: String, currentText: String): String {
         return commandProcessor.selectMentionSuggestion(nickname, currentText)
+    }
+    
+    // MARK: - View Once Management
+    
+    fun toggleViewOnce() {
+        val currentEnabled = state.getIsViewOnceEnabledValue()
+        state.setIsViewOnceEnabled(!currentEnabled)
+    }
+    
+    fun viewOnceMessage(message: BitchatMessage) {
+        state.setViewOnceMessage(message)
+        state.setShowViewOncePopup(true)
+        // Mark the message as viewed
+        state.markMessageAsViewed(message.id)
+    }
+    
+    fun dismissViewOncePopup() {
+        state.setShowViewOncePopup(false)
+        state.setViewOnceMessage(null)
     }
     
     // MARK: - BluetoothMeshDelegate Implementation (delegated)

@@ -188,7 +188,6 @@ fun MessageItem(
             }
         }
     }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
