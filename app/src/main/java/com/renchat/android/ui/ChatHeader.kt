@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.renchat.android.core.ui.utils.singleOrTripleClickable
 import com.renchat.android.core.ui.utils.RainbowText
+import com.renchat.android.model.GeoPerson
 
 /**
  * Header components for ChatScreen

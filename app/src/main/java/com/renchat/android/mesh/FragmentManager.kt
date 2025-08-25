@@ -2,6 +2,7 @@ package com.renchat.android.mesh
 
 import android.util.Log
 import com.renchat.android.protocol.RenChatPacket
+import com.renchat.android.protocol.BitchatPacket
 import com.renchat.android.protocol.MessageType
 import com.renchat.android.protocol.MessagePadding
 import com.renchat.android.model.FragmentPayload

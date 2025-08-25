@@ -5,6 +5,7 @@ import com.renchat.android.model.RenChatMessage
 import com.renchat.android.model.IdentityAnnouncement
 import com.renchat.android.model.RoutedPacket
 import com.renchat.android.protocol.RenChatPacket
+import com.renchat.android.protocol.BitchatPacket
 import com.renchat.android.protocol.MessageType
 import com.renchat.android.util.toHexString
 import kotlinx.coroutines.*

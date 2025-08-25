@@ -464,7 +464,7 @@ class BluetoothMeshService(private val context: Context) {
             val bitChatMessage = message.toBitChatMessage()
             val bitChatPayload = bitChatMessage.toBinaryPayload()
             if (bitChatPayload != null) {
-                val paddedPayload = MessagePadding.padMessage(bitChatPayload, 150)
+                val paddedPayload = MessagePadding.pad(bitChatPayload, 150)
                 
                 // Use BitChatPacket compatibility layer
                 val packet = ProtocolCompatibility.createBitChatPacket(
@@ -483,7 +483,7 @@ class BluetoothMeshService(private val context: Context) {
                 Log.d(TAG, "📤 Sent BitChat compatible public message: ${content.take(30)}...")
                 
                 // Store for forward to offline peers
-                storeForwardManager.storeBroadcastMessage(message, ttl = MAX_TTL.toInt())
+                storeForwardManager.cacheMessage(signedPacket, message.messageID ?: java.util.UUID.randomUUID().toString())
             } else {
                 Log.e(TAG, "Failed to encode message in BitChat format")
             }

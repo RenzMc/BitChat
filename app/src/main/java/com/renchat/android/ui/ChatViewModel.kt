@@ -944,6 +944,16 @@ class ChatViewModel(
     }
     
     /**
+     * Show location channels interface
+     */
+    fun showLocationChannels() {
+        // Implementation depends on what UI behavior is expected
+        // Based on the function name, this likely shows a location channels dialog or screen
+        // For now, we'll add a basic implementation that can be expanded
+        Log.d("ChatViewModel", "showLocationChannels called")
+    }
+    
+    /**
      * Block a user in geohash channels by their nickname
      */
     fun blockUserInGeohash(targetNickname: String) {

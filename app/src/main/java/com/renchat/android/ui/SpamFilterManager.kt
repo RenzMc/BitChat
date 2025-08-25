@@ -819,7 +819,7 @@ class SpamFilterManager(
         
         // Contextual learning - learn user's normal patterns
         val userPatterns = userContextualPatterns.getOrPut(peerID) { mutableSetOf() }
-        val messageWords = message.toLowerCase().split("\\s+".toRegex()).filter { it.length > 2 }
+        val messageWords = message.lowercase().split("\\s+".toRegex()).filter { it.length > 2 }
         
         // If user consistently uses certain phrases, whitelist them
         val commonPhrases = whitelistedPhrases.getOrPut(peerID) { mutableSetOf() }
