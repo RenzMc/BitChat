@@ -1,10 +1,10 @@
-# RenChat Privacy Policy
+# bitchat Privacy Policy
 
 *Last updated: January 2025*
 
 ## Our Commitment
 
-RenChat is designed with privacy as its foundation. We believe private communication is a fundamental human right. This policy explains how RenChat protects your privacy.
+bitchat is designed with privacy as its foundation. We believe private communication is a fundamental human right. This policy explains how bitchat protects your privacy.
 
 ## Summary
 
@@ -13,7 +13,7 @@ RenChat is designed with privacy as its foundation. We believe private communica
 - **No tracking** - We have no analytics, telemetry, or user tracking
 - **Open source** - You can verify these claims by reading our code
 
-## What Information RenChat Stores
+## What Information bitchat Stores
 
 ### On Your Device Only
 
@@ -40,16 +40,16 @@ RenChat is designed with privacy as its foundation. We believe private communica
 
 ### Temporary Session Data
 
-During each session, RenChat temporarily maintains:
+During each session, bitchat temporarily maintains:
 - Active peer connections (forgotten when app closes)
 - Routing information for message delivery
 - Cached messages for offline peers (12 hours max)
 
 ## What Information is Shared
 
-### With Other RenChat Users
+### With Other bitchat Users
 
-When you use RenChat, nearby peers can see:
+When you use bitchat, nearby peers can see:
 - Your chosen nickname
 - Your ephemeral public key (changes each session)
 - Messages you send to public rooms or directly to them
@@ -64,7 +64,7 @@ When you join a password-protected room:
 
 ## What We DON'T Do
 
-RenChat **never**:
+bitchat **never**:
 - Collects personal information
 - Tracks your location
 - Stores data on servers
@@ -91,7 +91,7 @@ You have complete control:
 
 ## Bluetooth & Permissions
 
-RenChat requires Bluetooth permission to function:
+bitchat requires Bluetooth permission to function:
 - Used only for peer-to-peer communication
 - No location data is accessed or stored
 - Bluetooth is not used for tracking
@@ -99,7 +99,7 @@ RenChat requires Bluetooth permission to function:
 
 ## Children's Privacy
 
-RenChat does not knowingly collect information from children. The app has no age verification because it collects no personal information from anyone.
+bitchat does not knowingly collect information from children. The app has no age verification because it collects no personal information from anyone.
 
 ## Data Retention
 
@@ -125,15 +125,15 @@ If we update this policy:
 
 ## Contact
 
-RenChat is an open source project. For privacy questions:
-- Review our code: https://github.com/yourusername/RenChat
+bitchat is an open source project. For privacy questions:
+- Review our code: https://github.com/yourusername/bitchat
 - Open an issue on GitHub
 - Join the discussion in public rooms
 
 ## Philosophy
 
-Privacy isn't just a feature—it's the entire point. RenChat proves that modern communication doesn't require surrendering your privacy. No accounts, no servers, no surveillance. Just people talking freely.
+Privacy isn't just a feature—it's the entire point. bitchat proves that modern communication doesn't require surrendering your privacy. No accounts, no servers, no surveillance. Just people talking freely.
 
 ---
 
-*This policy is released into the public domain under The Unlicense, just like RenChat itself.*
+*This policy is released into the public domain under The Unlicense, just like bitchat itself.*

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <exclude domain="sharedpref" path="renchat_prefs.xml"/>
-    <exclude domain="sharedpref" path="renchat_crypto.xml"/>
+    <exclude domain="sharedpref" path="bitchat_prefs.xml"/>
+    <exclude domain="sharedpref" path="bitchat_crypto.xml"/>
 </full-backup-content>

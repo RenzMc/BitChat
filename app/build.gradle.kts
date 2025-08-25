@@ -6,15 +6,16 @@ plugins {
 }
 
 android {
-    namespace = "com.renchat.android"
+    namespace = "com.bitchat.android"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.renchat.droid"
+        applicationId = "com.bitchat.droid"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 16
         versionName = "1.2.0"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -22,7 +23,9 @@ android {
     }
 
     dependenciesInfo {
+        // Disables dependency metadata when building APKs.
         includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
         includeInBundle = false
     }
 
@@ -36,7 +39,6 @@ android {
             )
         }
     }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -47,13 +49,11 @@ android {
     buildFeatures {
         compose = true
     }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-
     lint {
         baseline = file("lint-baseline.xml")
         abortOnError = false
@@ -61,27 +61,47 @@ android {
     }
 }
 
-
 dependencies {
+    // Core Android dependencies
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
-
+    implementation(libs.androidx.appcompat)
+    
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
-
+    
+    // Lifecycle
     implementation(libs.bundles.lifecycle)
+    
+    // Navigation
     implementation(libs.androidx.navigation.compose)
+    
+    // Permissions
     implementation(libs.accompanist.permissions)
+    
+    // Cryptography
     implementation(libs.bundles.cryptography)
+    
+    // JSON
     implementation(libs.gson)
+    
+    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    
+    // Bluetooth
     implementation(libs.nordic.ble)
-    implementation(libs.okhttp)
-    implementation(libs.gms.location)
-    implementation(libs.androidx.security.crypto)
-    implementation(libs.androidx.biometric)
 
+    // WebSocket
+    implementation(libs.okhttp)
+
+    // Google Play Services Location
+    implementation(libs.gms.location)
+
+    // Security preferences
+    implementation(libs.androidx.security.crypto)
+    
+    // Testing
     testImplementation(libs.bundles.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.bundles.compose.testing)

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "renchat-android"
+rootProject.name = "bitchat-android"
 include(":app")
