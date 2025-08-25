@@ -1,51 +1,17 @@
 package com.renchat.android.model
 
 import android.os.Parcelable
-import com.google.gson.GsonBuilder
 import kotlinx.parcelize.Parcelize
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
 
 /**
- * Delivery status for messages - exact same as iOS version
- */
-sealed class DeliveryStatus : Parcelable {
-    @Parcelize
-    object Sending : DeliveryStatus()
-
-    @Parcelize
-    object Sent : DeliveryStatus()
-
-    @Parcelize
-    data class Delivered(val to: String, val at: Date) : DeliveryStatus()
-
-    @Parcelize
-    data class Read(val by: String, val at: Date) : DeliveryStatus()
-
-    @Parcelize
-    data class Failed(val reason: String) : DeliveryStatus()
-
-    @Parcelize
-    data class PartiallyDelivered(val reached: Int, val total: Int) : DeliveryStatus()
-
-    fun getDisplayText(): String {
-        return when (this) {
-            is Sending -> "Sending..."
-            is Sent -> "Sent"
-            is Delivered -> "Delivered to ${this.to}"
-            is Read -> "Read by ${this.by}"
-            is Failed -> "Failed: ${this.reason}"
-            is PartiallyDelivered -> "Delivered to ${this.reached}/${this.total}"
-        }
-    }
-}
-
-/**
- * RenChatMessage - 100% compatible with iOS version
+ * BitChatMessage - 100% compatible with BitChat for cross-app communication
+ * This is used when communicating with BitChat users
  */
 @Parcelize
-data class RenChatMessage(
+data class BitChatMessage(
     val id: String = UUID.randomUUID().toString().uppercase(),
     val sender: String,
     val content: String,
@@ -59,22 +25,45 @@ data class RenChatMessage(
     val channel: String? = null,
     val encryptedContent: ByteArray? = null,
     val isEncrypted: Boolean = false,
-    val deliveryStatus: DeliveryStatus? = null,
-    val isViewOnce: Boolean = false,
-    val viewedBy: Set<String> = emptySet(),
-    val isPinned: Boolean = false,
-    val pinnedBy: String? = null,
-    val pinnedAt: Date? = null
+    val deliveryStatus: DeliveryStatus? = null
 ) : Parcelable {
 
     /**
-     * Convert message to binary payload format - exactly same as iOS version
+     * Convert to RenChatMessage for internal use
+     */
+    fun toRenChatMessage(): RenChatMessage {
+        return RenChatMessage(
+            id = id,
+            sender = sender,
+            content = content,
+            timestamp = timestamp,
+            isRelay = isRelay,
+            originalSender = originalSender,
+            isPrivate = isPrivate,
+            recipientNickname = recipientNickname,
+            senderPeerID = senderPeerID,
+            mentions = mentions,
+            channel = channel,
+            encryptedContent = encryptedContent,
+            isEncrypted = isEncrypted,
+            deliveryStatus = deliveryStatus,
+            // Default values for RenChat-specific fields
+            isViewOnce = false,
+            viewedBy = emptySet(),
+            isPinned = false,
+            pinnedBy = null,
+            pinnedAt = null
+        )
+    }
+
+    /**
+     * Convert message to binary payload format - exactly same as BitChat version (1 flags byte)
      */
     fun toBinaryPayload(): ByteArray? {
         try {
             val buffer = ByteBuffer.allocate(4096).apply { order(ByteOrder.BIG_ENDIAN) }
 
-            // Message format:
+            // Message format (BitChat compatibility - 1 flags byte):
             // - Flags: 1 byte (bit flags for optional fields)
             // - Timestamp: 8 bytes (milliseconds since epoch, big-endian)
             // - ID length: 1 byte + ID data
@@ -91,17 +80,8 @@ data class RenChatMessage(
             if (mentions != null && mentions.isNotEmpty()) flags = flags or 0x20u
             if (channel != null) flags = flags or 0x40u
             if (isEncrypted) flags = flags or 0x80u
-            
-            // Use second byte for additional flags
-            var flags2: UByte = 0u
-            if (isViewOnce) flags2 = flags2 or 0x01u
-            if (viewedBy.isNotEmpty()) flags2 = flags2 or 0x02u
-            if (isPinned) flags2 = flags2 or 0x04u
-            if (pinnedBy != null) flags2 = flags2 or 0x08u
-            if (pinnedAt != null) flags2 = flags2 or 0x10u
 
             buffer.put(flags.toByte())
-            buffer.put(flags2.toByte())
 
             // Timestamp (in milliseconds, 8 bytes big-endian)
             val timestampMillis = timestamp.time
@@ -164,28 +144,6 @@ data class RenChatMessage(
                 buffer.put(minOf(channelBytes.size, 255).toByte())
                 buffer.put(channelBytes.take(255).toByteArray())
             }
-            
-            // ViewedBy list (for view-once messages)
-            if (viewedBy.isNotEmpty()) {
-                buffer.put(minOf(viewedBy.size, 255).toByte())
-                viewedBy.take(255).forEach { peerID ->
-                    val peerBytes = peerID.toByteArray(Charsets.UTF_8)
-                    buffer.put(minOf(peerBytes.size, 255).toByte())
-                    buffer.put(peerBytes.take(255).toByteArray())
-                }
-            }
-            
-            // PinnedBy field
-            pinnedBy?.let { pinnerID ->
-                val pinnerBytes = pinnerID.toByteArray(Charsets.UTF_8)
-                buffer.put(minOf(pinnerBytes.size, 255).toByte())
-                buffer.put(pinnerBytes.take(255).toByteArray())
-            }
-            
-            // PinnedAt timestamp
-            pinnedAt?.let { pinTimestamp ->
-                buffer.putLong(pinTimestamp.time)
-            }
 
             val result = ByteArray(buffer.position())
             buffer.rewind()
@@ -197,55 +155,17 @@ data class RenChatMessage(
         }
     }
 
-    /**
-     * Convert to BitChatMessage for compatibility with BitChat users
-     */
-    fun toBitChatMessage(): BitChatMessage {
-        return BitChatMessage(
-            id = id,
-            sender = sender,
-            content = content,
-            timestamp = timestamp,
-            isRelay = isRelay,
-            originalSender = originalSender,
-            isPrivate = isPrivate,
-            recipientNickname = recipientNickname,
-            senderPeerID = senderPeerID,
-            mentions = mentions,
-            channel = channel,
-            encryptedContent = encryptedContent,
-            isEncrypted = isEncrypted,
-            deliveryStatus = deliveryStatus
-            // Note: RenChat-specific fields (isViewOnce, isPinned, etc.) are lost in conversion
-        )
-    }
-
     companion object {
         /**
-         * Smart parsing that detects message format (BitChat vs RenChat) and parses accordingly
+         * Parse message from binary payload - exactly same logic as BitChat version (1 flags byte)
          */
-        fun fromBinaryPayload(data: ByteArray): RenChatMessage? {
-            // Try RenChat format first (2 flags bytes)
-            val renChatMessage = parseRenChatFormat(data)
-            if (renChatMessage != null) {
-                return renChatMessage
-            }
-            
-            // Fallback to BitChat format (1 flags byte)
-            val bitChatMessage = BitChatMessage.fromBinaryPayload(data)
-            return bitChatMessage?.toRenChatMessage()
-        }
-
-        /**
-         * Parse message from binary payload - RenChat format with 2 flags bytes
-         */
-        private fun parseRenChatFormat(data: ByteArray): RenChatMessage? {
+        fun fromBinaryPayload(data: ByteArray): BitChatMessage? {
             try {
-                if (data.size < 14) return null
+                if (data.size < 13) return null
 
                 val buffer = ByteBuffer.wrap(data).apply { order(ByteOrder.BIG_ENDIAN) }
 
-                // Flags
+                // Flags (BitChat format - 1 byte)
                 val flags = buffer.get().toUByte()
                 val isRelay = (flags and 0x01u) != 0u.toUByte()
                 val isPrivate = (flags and 0x02u) != 0u.toUByte()
@@ -255,14 +175,6 @@ data class RenChatMessage(
                 val hasMentions = (flags and 0x20u) != 0u.toUByte()
                 val hasChannel = (flags and 0x40u) != 0u.toUByte()
                 val isEncrypted = (flags and 0x80u) != 0u.toUByte()
-                
-                // Second flags byte
-                val flags2 = buffer.get().toUByte()
-                val isViewOnce = (flags2 and 0x01u) != 0u.toUByte()
-                val hasViewedBy = (flags2 and 0x02u) != 0u.toUByte()
-                val isPinned = (flags2 and 0x04u) != 0u.toUByte()
-                val hasPinnedBy = (flags2 and 0x08u) != 0u.toUByte()
-                val hasPinnedAt = (flags2 and 0x10u) != 0u.toUByte()
 
                 // Timestamp
                 val timestampMillis = buffer.getLong()
@@ -355,43 +267,8 @@ data class RenChatMessage(
                         String(bytes, Charsets.UTF_8)
                     } else null
                 } else null
-                
-                // ViewedBy list
-                val viewedBy = if (hasViewedBy && buffer.hasRemaining()) {
-                    val viewedByCount = buffer.get().toInt() and 0xFF
-                    val viewedBySet = mutableSetOf<String>()
-                    repeat(viewedByCount) {
-                        if (buffer.hasRemaining()) {
-                            val length = buffer.get().toInt() and 0xFF
-                            if (buffer.remaining() >= length) {
-                                val bytes = ByteArray(length)
-                                buffer.get(bytes)
-                                viewedBySet.add(String(bytes, Charsets.UTF_8))
-                            }
-                        }
-                    }
-                    viewedBySet
-                } else emptySet()
-                
-                // PinnedBy field
-                val pinnedBy = if (hasPinnedBy && buffer.hasRemaining()) {
-                    val length = buffer.get().toInt() and 0xFF
-                    if (buffer.remaining() >= length) {
-                        val bytes = ByteArray(length)
-                        buffer.get(bytes)
-                        String(bytes, Charsets.UTF_8)
-                    } else null
-                } else null
-                
-                // PinnedAt timestamp
-                val pinnedAt = if (hasPinnedAt && buffer.hasRemaining()) {
-                    if (buffer.remaining() >= 8) {
-                        val pinnedTimestamp = buffer.getLong()
-                        Date(pinnedTimestamp)
-                    } else null
-                } else null
 
-                return RenChatMessage(
+                return BitChatMessage(
                     id = id,
                     sender = sender,
                     content = content,
@@ -404,12 +281,7 @@ data class RenChatMessage(
                     mentions = mentions,
                     channel = channel,
                     encryptedContent = encryptedContent,
-                    isEncrypted = isEncrypted,
-                    isViewOnce = isViewOnce,
-                    viewedBy = viewedBy,
-                    isPinned = isPinned,
-                    pinnedBy = pinnedBy,
-                    pinnedAt = pinnedAt
+                    isEncrypted = isEncrypted
                 )
 
             } catch (e: Exception) {
@@ -422,7 +294,7 @@ data class RenChatMessage(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as RenChatMessage
+        other as BitChatMessage
 
         if (id != other.id) return false
         if (sender != other.sender) return false
@@ -441,11 +313,6 @@ data class RenChatMessage(
         } else if (other.encryptedContent != null) return false
         if (isEncrypted != other.isEncrypted) return false
         if (deliveryStatus != other.deliveryStatus) return false
-        if (isViewOnce != other.isViewOnce) return false
-        if (viewedBy != other.viewedBy) return false
-        if (isPinned != other.isPinned) return false
-        if (pinnedBy != other.pinnedBy) return false
-        if (pinnedAt != other.pinnedAt) return false
 
         return true
     }
@@ -465,13 +332,6 @@ data class RenChatMessage(
         result = 31 * result + (encryptedContent?.contentHashCode() ?: 0)
         result = 31 * result + isEncrypted.hashCode()
         result = 31 * result + (deliveryStatus?.hashCode() ?: 0)
-        result = 31 * result + isViewOnce.hashCode()
-        result = 31 * result + viewedBy.hashCode()
-        result = 31 * result + isPinned.hashCode()
-        result = 31 * result + (pinnedBy?.hashCode() ?: 0)
-        result = 31 * result + (pinnedAt?.hashCode() ?: 0)
         return result
     }
 }
-
-

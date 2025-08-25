@@ -305,6 +305,17 @@ class PeerManager {
     }
     
     /**
+     * Get known RenChat peers (for compatibility layer)
+     * For now, we assume all peers support RenChat features since we can't differentiate
+     * In future versions, we could track this via handshake or protocol negotiation
+     */
+    fun getKnownRenChatPeers(): List<String> {
+        // For now, return empty list to force BitChat compatibility mode
+        // This ensures maximum interoperability with existing BitChat users
+        return emptyList()
+    }
+    
+    /**
      * Clear all peer data
      */
     fun clearAllPeers() {

@@ -10,7 +10,7 @@ class RenChatApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Initialize any global services or configurations
-        // For now, keep it simple
+        // Initialize relay directory (loads assets/nostr_relays.csv)
+        com.renchat.android.nostr.RelayDirectory.initialize(this)
     }
 }

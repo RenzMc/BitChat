@@ -85,7 +85,7 @@ class FragmentManager {
             )
             
             // iOS: MessageType.fragment.rawValue (single fragment type)
-            val fragmentPacket = RenChatPacket(
+            val fragmentPacket = BitchatPacket(
                 type = MessageType.FRAGMENT.value,
                 ttl = packet.ttl,
                 senderID = packet.senderID,

@@ -144,7 +144,7 @@ class MessageHandler(private val myPeerID: String) {
             }
             
             // Create NOISE_ENCRYPTED packet exactly like iOS
-            val packet = RenChatPacket(
+            val packet = BitchatPacket(
                 version = 1u,
                 type = MessageType.NOISE_ENCRYPTED.value,
                 senderID = hexStringToByteArray(myPeerID),
@@ -263,7 +263,7 @@ class MessageHandler(private val myPeerID: String) {
                 Log.d(TAG, "Generated handshake response for $peerID (${response.size} bytes)")
                 
                 // Send response using same packet type (simplified iOS approach)
-                val responsePacket = RenChatPacket(
+                val responsePacket = BitchatPacket(
                     version = 1u,
                     type = MessageType.NOISE_HANDSHAKE.value,
                     senderID = hexStringToByteArray(myPeerID),

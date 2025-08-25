@@ -360,7 +360,8 @@ private fun ChatFloatingHeader(
                     },
                     onSidebarClick = onSidebarToggle,
                     onTripleClick = onPanicClear,
-                    onShowAppInfo = onShowAppInfo
+                    onShowAppInfo = onShowAppInfo,
+                    onLocationChannelsClick = { viewModel.showLocationChannels() }
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(

@@ -130,10 +130,29 @@ fun PeerCounter(
     hasUnreadChannels: Map<String, Int>,
     hasUnreadPrivateMessages: Set<String>,
     isConnected: Boolean,
+    selectedLocationChannel: com.renchat.android.geohash.ChannelID?,
+    geohashPeople: List<GeoPerson>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    
+    // Compute channel-aware people count and color (matches iOS logic exactly)
+    val (peopleCount, countColor) = when (selectedLocationChannel) {
+        is com.renchat.android.geohash.ChannelID.Location -> {
+            // Geohash channel: show geohash participants
+            val count = geohashPeople.size
+            val green = Color(0xFF00C851) // Standard green
+            Pair(count, if (count > 0) green else Color.Gray)
+        }
+        is com.renchat.android.geohash.ChannelID.Mesh,
+        null -> {
+            // Mesh channel: show Bluetooth-connected peers (excluding self)
+            val count = connectedPeers.size
+            val meshBlue = Color(0xFF007AFF) // iOS-style blue for mesh
+            Pair(count, if (isConnected && count > 0) meshBlue else Color.Gray)
+        }
+    }
     
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -168,15 +187,18 @@ fun PeerCounter(
         
         Icon(
             imageVector = Icons.Default.Group,
-            contentDescription = "Connected peers",
+            contentDescription = when (selectedLocationChannel) {
+                is com.renchat.android.geohash.ChannelID.Location -> "Geohash participants"
+                else -> "Connected peers"
+            },
             modifier = Modifier.size(16.dp),
-            tint = if (isConnected) Color(0xFF00C851) else Color.Red
+            tint = countColor
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = "${connectedPeers.size}",
+            text = "$peopleCount",
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isConnected) Color(0xFF00C851) else Color.Red,
+            color = countColor,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium
         )
@@ -203,7 +225,8 @@ fun ChatHeaderContent(
     onBackClick: () -> Unit,
     onSidebarClick: () -> Unit,
     onTripleClick: () -> Unit,
-    onShowAppInfo: () -> Unit
+    onShowAppInfo: () -> Unit,
+    onLocationChannelsClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -252,6 +275,7 @@ fun ChatHeaderContent(
                 onTitleClick = onShowAppInfo,
                 onTripleTitleClick = onTripleClick,
                 onSidebarClick = onSidebarClick,
+                onLocationChannelsClick = onLocationChannelsClick,
                 settingsManager = settingsManager,
                 viewModel = viewModel
             )
@@ -428,6 +452,7 @@ private fun MainHeader(
     onTitleClick: () -> Unit,
     onTripleTitleClick: () -> Unit,
     onSidebarClick: () -> Unit,
+    onLocationChannelsClick: () -> Unit,
     settingsManager: SettingsManager,
     viewModel: ChatViewModel
 ) {
@@ -437,6 +462,8 @@ private fun MainHeader(
     val hasUnreadChannels by viewModel.unreadChannelMessages.observeAsState(emptyMap())
     val hasUnreadPrivateMessages by viewModel.unreadPrivateMessages.observeAsState(emptySet())
     val isConnected by viewModel.isConnected.observeAsState(false)
+    val selectedLocationChannel by viewModel.selectedLocationChannel.observeAsState()
+    val geohashPeople by viewModel.geohashPeople.observeAsState(emptyList())
     
     // Theme settings popup state
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -477,7 +504,9 @@ private fun MainHeader(
             HeaderActionIcons(
                 isConnected = isConnected,
                 joinedChannels = joinedChannels,
-                colorScheme = colorScheme
+                colorScheme = colorScheme,
+                viewModel = viewModel,
+                onLocationChannelsClick = onLocationChannelsClick
             )
             
             // Settings gear icon
@@ -499,6 +528,8 @@ private fun MainHeader(
                 hasUnreadChannels = hasUnreadChannels,
                 hasUnreadPrivateMessages = hasUnreadPrivateMessages,
                 isConnected = isConnected,
+                selectedLocationChannel = selectedLocationChannel,
+                geohashPeople = geohashPeople,
                 onClick = onSidebarClick,
                 modifier = Modifier.wrapContentWidth() // Ensure it doesn't expand unnecessarily
             )
@@ -566,43 +597,71 @@ private fun ThemeSelectionDialog(
     )
 }
 
+@Composable  
+private fun LocationChannelsButton(
+    viewModel: ChatViewModel,
+    onClick: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    
+    // Get current channel selection from location manager
+    val selectedChannel by viewModel.selectedLocationChannel.observeAsState()
+    val teleported by viewModel.isTeleported.observeAsState(false)
+    
+    val (badgeText, badgeColor) = when (selectedChannel) {
+        is com.renchat.android.geohash.ChannelID.Mesh -> {
+            "#mesh" to Color(0xFF007AFF) // iOS blue for mesh
+        }
+        is com.renchat.android.geohash.ChannelID.Location -> {
+            val geohash = (selectedChannel as com.renchat.android.geohash.ChannelID.Location).channel.geohash
+            "#$geohash" to Color(0xFF00C851) // Green for location
+        }
+        null -> "#mesh" to Color(0xFF007AFF) // Default to mesh
+    }
+    
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent,
+            contentColor = badgeColor
+        ),
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = badgeText,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = FontFamily.Monospace
+                ),
+                color = badgeColor,
+                maxLines = 1
+            )
+            
+            // Teleportation indicator (like iOS)
+            if (teleported) {
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.Default.PinDrop,
+                    contentDescription = "Teleported",
+                    modifier = Modifier.size(12.dp),
+                    tint = badgeColor
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun HeaderActionIcons(
     isConnected: Boolean,
     joinedChannels: Set<String>,
-    colorScheme: ColorScheme
+    colorScheme: ColorScheme,
+    viewModel: ChatViewModel,
+    onLocationChannelsClick: () -> Unit
 ) {
-    // This function provides space for new action icons that might appear
-    // based on app state (location-based joining, channel discovery, etc.)
-    // Icons will appear here without covering the gear settings icon
-    
-    // Example: Location-based channel joining icon
-    // if (shouldShowLocationIcon) {
-    //     IconButton(
-    //         onClick = { /* location-based joining */ },
-    //         modifier = Modifier.size(24.dp)
-    //     ) {
-    //         Icon(
-    //             imageVector = Icons.Filled.LocationOn,
-    //             contentDescription = "Join nearby channels",
-    //             modifier = Modifier.size(16.dp),
-    //             tint = colorScheme.primary
-    //         )
-    //     }
-    // }
-    
-    // Example: Channel discovery icon
-    // if (shouldShowDiscoveryIcon) {
-    //     IconButton(
-    //         onClick = { /* channel discovery */ },
-    //         modifier = Modifier.size(24.dp)
-    //     ) {
-    //         Icon(
-    //             imageVector = Icons.Filled.Search,
-    //             contentDescription = "Discover channels",
-    //             modifier = Modifier.size(16.dp),
-    //             tint = colorScheme.primary
-    //         )
-    //     }
-    // }
+    // LocationChannelsButton - shows #mesh or #geohash like BitChat
+    LocationChannelsButton(
+        viewModel = viewModel,
+        onClick = onLocationChannelsClick
+    )
 }

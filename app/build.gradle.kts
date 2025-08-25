@@ -13,8 +13,8 @@ android {
         applicationId = "com.renchat.droid"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 15
-        versionName = "1.1.0"
+        versionCode = 16
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -38,15 +38,15 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
-
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
     buildFeatures {
         compose = true
     }
-
-    // hapus kotlinCompilerExtensionVersion, udah deprecated
 
     packaging {
         resources {
@@ -61,19 +61,6 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(17)
-    compilerOptions {
-        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
-        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
-        freeCompilerArgs.addAll(
-            listOf(
-                "-Xopt-in=kotlin.RequiresOptIn",
-                "-Xjvm-default=all"
-            )
-        )
-    }
-}
 
 dependencies {
     implementation(libs.androidx.core.ktx)

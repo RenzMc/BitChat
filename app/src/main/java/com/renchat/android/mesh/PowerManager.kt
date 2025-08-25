@@ -46,7 +46,7 @@ class PowerManager(private val context: Context) {
         ULTRA_LOW_POWER // Minimal operations only
     }
     
-    private var currentMode = PowerMode.BALANCED
+    private var currentMode = PowerMode.PERFORMANCE
     private var isCharging = false
     private var batteryLevel = 100
     private var isAppInBackground = false
@@ -225,8 +225,11 @@ class PowerManager(private val context: Context) {
     
     private fun updatePowerMode() {
         val newMode = when {
-            // Always use performance mode when charging (unless in background too long)
+            // Always use performance mode when charging OR in foreground with good battery for instant connectivity
             isCharging && !isAppInBackground -> PowerMode.PERFORMANCE
+            
+            // Use performance mode in foreground with good battery for BitChat-level instant connectivity
+            !isAppInBackground && batteryLevel > MEDIUM_BATTERY -> PowerMode.PERFORMANCE
             
             // Critical battery - use ultra low power
             batteryLevel <= CRITICAL_BATTERY -> PowerMode.ULTRA_LOW_POWER
@@ -240,7 +243,7 @@ class PowerManager(private val context: Context) {
             // Background app with good battery - use balanced
             isAppInBackground -> PowerMode.BALANCED
             
-            // Foreground with good battery - use balanced
+            // Foreground with lower battery - use balanced
             else -> PowerMode.BALANCED
         }
         

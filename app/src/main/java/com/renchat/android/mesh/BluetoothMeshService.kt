@@ -4,10 +4,13 @@ import android.content.Context
 import android.util.Log
 import com.renchat.android.crypto.EncryptionService
 import com.renchat.android.model.RenChatMessage
+import com.renchat.android.model.BitChatMessage
 import com.renchat.android.protocol.MessagePadding
 import com.renchat.android.model.RoutedPacket
 import com.renchat.android.model.IdentityAnnouncement
 import com.renchat.android.protocol.RenChatPacket
+import com.renchat.android.protocol.BitchatPacket
+import com.renchat.android.protocol.ProtocolCompatibility
 import com.renchat.android.protocol.MessageType
 import com.renchat.android.protocol.SpecialRecipients
 import com.renchat.android.util.toHexString
@@ -125,7 +128,7 @@ class BluetoothMeshService(private val context: Context) {
             
             override fun sendHandshakeResponse(peerID: String, response: ByteArray) {
                 // Send Noise handshake response
-                val responsePacket = RenChatPacket(
+                val responsePacket = BitchatPacket(
                     version = 1u,
                     type = MessageType.NOISE_HANDSHAKE.value,
                     senderID = hexStringToByteArray(myPeerID),
@@ -230,7 +233,7 @@ class BluetoothMeshService(private val context: Context) {
                     val handshakeData = encryptionService.initiateHandshake(peerID)
 
                     if (handshakeData != null) {
-                        val packet = RenChatPacket(
+                        val packet = BitchatPacket(
                             version = 1u,
                             type = MessageType.NOISE_HANDSHAKE.value,
                             senderID = hexStringToByteArray(myPeerID),
@@ -439,24 +442,51 @@ class BluetoothMeshService(private val context: Context) {
     }
     
     /**
-     * Send public message
+     * Send public message - COMPATIBILITY: Supports both BitChat and RenChat formats
      */
     fun sendMessage(content: String, mentions: List<String> = emptyList(), channel: String? = null) {
         if (content.isEmpty()) return
         
         serviceScope.launch {
-            val packet = RenChatPacket(
-                version = 1u,
-                type = MessageType.MESSAGE.value,
-                senderID = hexStringToByteArray(myPeerID),
-                recipientID = SpecialRecipients.BROADCAST,
-                timestamp = System.currentTimeMillis().toULong(),
-                payload = content.toByteArray(Charsets.UTF_8),
-                signature = null,
-                ttl = MAX_TTL
+            val nickname = delegate?.getNickname() ?: myPeerID
+            
+            // Create RenChat message with full features
+            val message = RenChatMessage(
+                sender = nickname,
+                content = content,
+                timestamp = Date(),
+                senderPeerID = myPeerID,
+                mentions = mentions,
+                channel = channel
             )
+            
+            // ALWAYS send BitChat compatible format for maximum interoperability
+            val bitChatMessage = message.toBitChatMessage()
+            val bitChatPayload = bitChatMessage.toBinaryPayload()
+            if (bitChatPayload != null) {
+                val paddedPayload = MessagePadding.padMessage(bitChatPayload, 150)
+                
+                // Use BitChatPacket compatibility layer
+                val packet = ProtocolCompatibility.createBitChatPacket(
+                    type = MessageType.MESSAGE.value,
+                    ttl = MAX_TTL,
+                    senderID = myPeerID,
+                    payload = paddedPayload
+                )
+                
+                // Sign the packet for authenticity
+                val signedPacket = encryptionService.signData(packet.toBinaryDataForSigning()!!)?.let { signature ->
+                    packet.copy(signature = signature)
+                } ?: packet
 
-            connectionManager.broadcastPacket(RoutedPacket(packet))
+                connectionManager.broadcastPacket(RoutedPacket(signedPacket))
+                Log.d(TAG, "📤 Sent BitChat compatible public message: ${content.take(30)}...")
+                
+                // Store for forward to offline peers
+                storeForwardManager.storeBroadcastMessage(message, ttl = MAX_TTL.toInt())
+            } else {
+                Log.e(TAG, "Failed to encode message in BitChat format")
+            }
         }
     }
     
@@ -497,7 +527,7 @@ class BluetoothMeshService(private val context: Context) {
                     val encrypted = encryptionService.encrypt(messagePayload.encode(), recipientPeerID)
                     
                     // Create NOISE_ENCRYPTED packet exactly like iOS
-                    val packet = RenChatPacket(
+                    val packet = BitchatPacket(
                         version = 1u,
                         type = MessageType.NOISE_ENCRYPTED.value,
                         senderID = hexStringToByteArray(myPeerID),
@@ -548,7 +578,7 @@ class BluetoothMeshService(private val context: Context) {
                 val encrypted = encryptionService.encrypt(readReceiptPayload.encode(), recipientPeerID)
                 
                 // Create NOISE_ENCRYPTED packet exactly like iOS
-                val packet = RenChatPacket(
+                val packet = BitchatPacket(
                     version = 1u,
                     type = MessageType.NOISE_ENCRYPTED.value,
                     senderID = hexStringToByteArray(myPeerID),
@@ -598,7 +628,7 @@ class BluetoothMeshService(private val context: Context) {
                 return@launch
             }
             
-            val announcePacket = RenChatPacket(
+            val announcePacket = BitchatPacket(
                 type = MessageType.ANNOUNCE.value,
                 ttl = MAX_TTL,
                 senderID = myPeerID,
@@ -645,7 +675,7 @@ class BluetoothMeshService(private val context: Context) {
             return
         }
         
-        val packet = RenChatPacket(
+        val packet = BitchatPacket(
             type = MessageType.ANNOUNCE.value,
             ttl = MAX_TTL,
             senderID = myPeerID,
@@ -667,7 +697,7 @@ class BluetoothMeshService(private val context: Context) {
      */
     private fun sendLeaveAnnouncement() {
         val nickname = delegate?.getNickname() ?: myPeerID
-        val packet = RenChatPacket(
+        val packet = BitchatPacket(
             type = MessageType.LEAVE.value,
             ttl = MAX_TTL,
             senderID = myPeerID,
