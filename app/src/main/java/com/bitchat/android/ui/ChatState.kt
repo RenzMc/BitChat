@@ -128,6 +128,19 @@ class ChatState {
     private val _geohashParticipantCounts = MutableLiveData<Map<String, Int>>(emptyMap())
     val geohashParticipantCounts: LiveData<Map<String, Int>> = _geohashParticipantCounts
     
+    // View Once feature state
+    private val _isViewOnceEnabled = MutableLiveData<Boolean>(false)
+    val isViewOnceEnabled: LiveData<Boolean> = _isViewOnceEnabled
+    
+    private val _showViewOncePopup = MutableLiveData<Boolean>(false)
+    val showViewOncePopup: LiveData<Boolean> = _showViewOncePopup
+    
+    private val _viewOnceMessage = MutableLiveData<BitchatMessage?>(null)
+    val viewOnceMessage: LiveData<BitchatMessage?> = _viewOnceMessage
+    
+    private val _viewedOnceMessages = MutableLiveData<Set<String>>(emptySet())
+    val viewedOnceMessages: LiveData<Set<String>> = _viewedOnceMessages
+    
     // Unread state computed properties
     val hasUnreadChannels: MediatorLiveData<Boolean> = MediatorLiveData<Boolean>()
     val hasUnreadPrivateMessages: MediatorLiveData<Boolean> = MediatorLiveData<Boolean>()
@@ -169,6 +182,10 @@ class ChatState {
     fun getGeohashPeopleValue() = _geohashPeople.value ?: emptyList()
     fun getTeleportedGeoValue() = _teleportedGeo.value ?: emptySet()
     fun getGeohashParticipantCountsValue() = _geohashParticipantCounts.value ?: emptyMap()
+    fun getIsViewOnceEnabledValue() = _isViewOnceEnabled.value ?: false
+    fun getShowViewOncePopupValue() = _showViewOncePopup.value ?: false
+    fun getViewOnceMessageValue() = _viewOnceMessage.value
+    fun getViewedOnceMessagesValue() = _viewedOnceMessages.value ?: emptySet()
     
     // Setters for state updates
     fun setMessages(messages: List<BitchatMessage>) {
@@ -299,6 +316,27 @@ class ChatState {
     
     fun setGeohashParticipantCounts(counts: Map<String, Int>) {
         _geohashParticipantCounts.value = counts
+    }
+    
+    fun setIsViewOnceEnabled(enabled: Boolean) {
+        _isViewOnceEnabled.value = enabled
+    }
+    
+    fun setShowViewOncePopup(show: Boolean) {
+        _showViewOncePopup.value = show
+    }
+    
+    fun setViewOnceMessage(message: BitchatMessage?) {
+        _viewOnceMessage.value = message
+    }
+    
+    fun setViewedOnceMessages(viewed: Set<String>) {
+        _viewedOnceMessages.value = viewed
+    }
+    
+    fun markMessageAsViewed(messageId: String) {
+        val currentViewed = _viewedOnceMessages.value ?: emptySet()
+        _viewedOnceMessages.value = currentViewed + messageId
     }
 
 }

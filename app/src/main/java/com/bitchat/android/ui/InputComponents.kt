@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -159,7 +160,9 @@ fun MessageInput(
     selectedPrivatePeer: String?,
     currentChannel: String?,
     nickname: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isViewOnceEnabled: Boolean = false,
+    onViewOnceToggle: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isFocused = remember { mutableStateOf(false) }
@@ -209,7 +212,16 @@ fun MessageInput(
             }
         }
         
-        Spacer(modifier = Modifier.width(8.dp)) // Reduced spacing
+        Spacer(modifier = Modifier.width(4.dp)) // Reduced spacing
+        
+        // View Once toggle button (always visible)
+        ViewOnceButton(
+            isEnabled = isViewOnceEnabled,
+            onToggle = onViewOnceToggle,
+            modifier = Modifier.size(32.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(4.dp))
         
         // Command quick access button
         if (value.text.isEmpty()) {
@@ -380,6 +392,53 @@ fun MentionSuggestionsBox(
 }
 
 @Composable
+fun ViewOnceButton(
+    isEnabled: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    
+    IconButton(
+        onClick = onToggle,
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .background(
+                    color = if (isEnabled) {
+                        Color(0xFF00FF00).copy(alpha = 0.75f) // Green when active
+                    } else {
+                        colorScheme.onSurface.copy(alpha = 0.3f) // Gray when inactive
+                    },
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Lock icon with number 1
+            Box(
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = "View Once",
+                    modifier = Modifier.size(18.dp),
+                    tint = Color.White
+                )
+                Text(
+                    text = "1",
+                    color = Color.White,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.offset(y = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun MentionSuggestionItem(
     suggestion: String,
     onClick: () -> Unit
@@ -414,5 +473,179 @@ fun MentionSuggestionItem(
             color = colorScheme.onSurface.copy(alpha = 0.7f),
             fontSize = (BASE_FONT_SIZE - 5).sp
         )
+    }
+}
+
+@Composable
+fun ViewOnceMessage(
+    message: com.bitchat.android.model.BitchatMessage,
+    isViewed: Boolean,
+    onViewMessage: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    
+    if (!isViewed) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clickable { onViewMessage() }
+                .background(
+                    color = colorScheme.surface.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .border(
+                    1.dp,
+                    color = colorScheme.outline.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Lock icon
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = "View Once Message",
+                modifier = Modifier.size(24.dp),
+                tint = colorScheme.primary
+            )
+            
+            // Text
+            Column {
+                Text(
+                    text = "View Once",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = colorScheme.primary
+                )
+                Text(
+                    text = "Click to open",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+        }
+    } else {
+        // Already viewed - show as removed
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .background(
+                    color = colorScheme.onSurface.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = "View Once Viewed",
+                modifier = Modifier.size(20.dp),
+                tint = colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+            
+            Text(
+                text = "View Once message (viewed)",
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.5f),
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+            )
+        }
+    }
+}
+
+@Composable
+fun ViewOncePopup(
+    message: com.bitchat.android.model.BitchatMessage?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (message != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = modifier
+                    .fillMaxWidth(0.9f)
+                    .fillMaxHeight(0.8f)
+                    .clickable(enabled = false) { }, // Prevent card clicks from dismissing
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Header with close button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "View Once Message",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        IconButton(
+                            onClick = onDismiss
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    // Message content with scrolling
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = "From: ${message.sender}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = message.content.take(5000), // Limit content to prevent crashes
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        
+                        if (message.content.length > 5000) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "... (message truncated for performance)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

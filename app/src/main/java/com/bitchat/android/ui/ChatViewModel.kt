@@ -236,7 +236,7 @@ class ChatViewModel(
                 // Show mute message
                 val muteMessage = BitchatMessage(
                     sender = "system",
-                    content = antiSpamResult.warning ?: "Pesan diblokir karena spam",
+                    content = antiSpamResult.warning ?: "Message blocked due to spam",
                     timestamp = Date(),
                     isRelay = false
                 )
@@ -279,14 +279,22 @@ class ChatViewModel(
         if (selectedPeer != null) {
             // Send private message
             val recipientNickname = meshService.getPeerNicknames()[selectedPeer]
+            // Create private message with View Once support
+            val isViewOnceEnabled = state.getIsViewOnceEnabledValue()
             privateChatManager.sendPrivateMessage(
                 content, 
                 selectedPeer, 
                 recipientNickname,
                 state.getNicknameValue(),
-                meshService.myPeerID
+                meshService.myPeerID,
+                isViewOnce = isViewOnceEnabled
             ) { messageContent, peerID, recipientNicknameParam, messageId ->
                 meshService.sendPrivateMessage(messageContent, peerID, recipientNicknameParam, messageId)
+            }
+            
+            // Reset View Once after sending if enabled
+            if (isViewOnceEnabled) {
+                state.setIsViewOnceEnabled(false)
             }
         } else {
             // Check if we're in a location channel
@@ -303,8 +311,14 @@ class ChatViewModel(
                     isRelay = false,
                     senderPeerID = meshService.myPeerID,
                     mentions = if (mentions.isNotEmpty()) mentions else null,
-                    channel = currentChannelValue
+                    channel = currentChannelValue,
+                    isViewOnce = state.getIsViewOnceEnabledValue()
                 )
+                
+                // Reset View Once after sending if enabled
+                if (state.getIsViewOnceEnabledValue()) {
+                    state.setIsViewOnceEnabled(false)
+                }
                 
                 if (currentChannelValue != null) {
                     channelManager.addChannelMessage(currentChannelValue, message, meshService.myPeerID)
@@ -731,5 +745,36 @@ class ChatViewModel(
         return nostrGeohashService.colorForNostrPubkey(pubkeyHex, isDark)
     }
     
+    // MARK: - View Once Functionality
+    
+    /**
+     * Toggle View Once mode for the next message
+     */
+    fun toggleViewOnce() {
+        val currentState = state.getIsViewOnceEnabledValue()
+        state.setIsViewOnceEnabled(!currentState)
+        Log.d(TAG, "View Once toggled to: ${!currentState}")
+    }
+    
+    /**
+     * Open a View Once message for viewing
+     */
+    fun viewOnceMessage(message: BitchatMessage) {
+        if (message.isViewOnce && !state.getViewedOnceMessagesValue().contains(message.id)) {
+            state.setViewOnceMessage(message)
+            state.setShowViewOncePopup(true)
+            state.markMessageAsViewed(message.id)
+            Log.d(TAG, "View Once message opened: ${message.id}")
+        }
+    }
+    
+    /**
+     * Dismiss the View Once popup
+     */
+    fun dismissViewOncePopup() {
+        state.setShowViewOncePopup(false)
+        state.setViewOnceMessage(null)
+        Log.d(TAG, "View Once popup dismissed")
+    }
 
 }
