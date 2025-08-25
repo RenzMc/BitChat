@@ -2,7 +2,9 @@ package com.renchat.android.ui
 
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -94,6 +96,12 @@ fun NicknameEditor(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
+    
+    // Auto-scroll to end when text changes (simulates cursor following)
+    LaunchedEffect(value) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
     
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -110,16 +118,19 @@ fun NicknameEditor(
             onValueChange = onValueChange,
             textStyle = MaterialTheme.typography.bodyMedium.copy(
                 color = colorScheme.primary,
-                fontWeight = FontWeight.Medium
+                fontFamily = FontFamily.Monospace
             ),
             cursorBrush = SolidColor(colorScheme.primary),
+            singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = { 
                     focusManager.clearFocus()
                 }
             ),
-            modifier = Modifier.widthIn(max = 100.dp)
+            modifier = Modifier
+                .widthIn(max = 120.dp)
+                .horizontalScroll(scrollState)
         )
     }
 }

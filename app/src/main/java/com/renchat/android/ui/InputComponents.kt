@@ -59,10 +59,10 @@ class SlashCommandVisualTransformation : VisualTransformation {
                 // Add the styled slash command
                 withStyle(
                     style = SpanStyle(
-                        color = Color(0xFF00BFA5), // Modern teal accent
-                        fontFamily = FontFamily.Default,
-                        fontWeight = FontWeight.SemiBold,
-                        background = Color(0x1A00BFA5) // Teal background with transparency
+                        color = Color(0xFF00FF7F), // Bright green
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Medium,
+                        background = Color(0xFF2D2D2D) // Dark gray background
                     )
                 ) {
                     append(match.value)
@@ -85,8 +85,80 @@ class SlashCommandVisualTransformation : VisualTransformation {
 }
 
 /**
+ * Combined VisualTransformation that styles both slash commands and mentions
+ * while preserving cursor positioning and click handling
+ */
+class CombinedCommandVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val slashCommandRegex = Regex("(/\\w+)(?=\\s|$)")
+        val mentionRegex = Regex("@([a-zA-Z0-9_]+)")
+        
+        val annotatedString = buildAnnotatedString {
+            var lastIndex = 0
+            
+            // Collect all matches and sort by position
+            val slashMatches = slashCommandRegex.findAll(text.text).map { 
+                Triple(it.range.first, it.range.last, "slash") to it
+            }
+            val mentionMatches = mentionRegex.findAll(text.text).map { 
+                Triple(it.range.first, it.range.last, "mention") to it
+            }
+            
+            val allMatches = (slashMatches + mentionMatches).sortedBy { it.first.first }
+            
+            allMatches.forEach { (rangeInfo, match) ->
+                // Add text before the match
+                if (match.range.first > lastIndex) {
+                    append(text.text.substring(lastIndex, match.range.first))
+                }
+                
+                // Add the styled command/mention
+                when (rangeInfo.third) {
+                    "slash" -> {
+                        withStyle(
+                            style = SpanStyle(
+                                color = Color(0xFF00FF7F), // Bright green
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Medium,
+                                background = Color(0xFF2D2D2D) // Dark gray background
+                            )
+                        ) {
+                            append(match.value)
+                        }
+                    }
+                    "mention" -> {
+                        withStyle(
+                            style = SpanStyle(
+                                color = Color(0xFFFF9500), // Orange
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        ) {
+                            append(match.value)
+                        }
+                    }
+                }
+                
+                lastIndex = match.range.last + 1
+            }
+            
+            // Add remaining text
+            if (lastIndex < text.text.length) {
+                append(text.text.substring(lastIndex))
+            }
+        }
+        
+        return TransformedText(
+            text = annotatedString,
+            offsetMapping = OffsetMapping.Identity
+        )
+    }
+}
+
+/**
  * VisualTransformation that styles mentions with background and color
  * while preserving cursor positioning and click handling
+ * @deprecated Use CombinedCommandVisualTransformation for both commands and mentions
  */
 class MentionVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
@@ -103,10 +175,9 @@ class MentionVisualTransformation : VisualTransformation {
                 // Add the styled mention
                 withStyle(
                     style = SpanStyle(
-                        color = Color(0xFF1976D2), // Modern blue accent
-                        fontFamily = FontFamily.Default,
-                        fontWeight = FontWeight.SemiBold,
-                        background = Color(0x1A1976D2) // Blue background with transparency
+                        color = Color(0xFFFF9500), // Orange
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold
                     )
                 ) {
                     append(match.value)

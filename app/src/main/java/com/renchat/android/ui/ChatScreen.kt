@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
@@ -120,7 +121,9 @@ fun ChatScreen(viewModel: ChatViewModel, settingsManager: SettingsManager) {
             )
 
             // Messages area - takes up available space, will compress when keyboard appears
-            MessagesList(
+            // Disable overscroll to prevent zoom-like effects on Android 12+
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                MessagesList(
                 messages = displayMessages,
                 currentUserNickname = nickname,
                 meshService = viewModel.meshService,
@@ -140,7 +143,8 @@ fun ChatScreen(viewModel: ChatViewModel, settingsManager: SettingsManager) {
                 },
                 canPinMessages = canPinMessages,
                 modifier = Modifier.weight(1f)
-            )
+                )
+            }
             // Input area - stays at bottom
             ChatInputSection(
                 messageText = messageText,

@@ -49,10 +49,25 @@ fun MessagesList(
 ) {
     val listState = rememberLazyListState()
 
-    // Auto-scroll to bottom when new messages arrive
+    // Track if this is the first time messages are being loaded
+    var hasScrolledToInitialPosition by remember { mutableStateOf(false) }
+    
+    // Smart scroll: auto-scroll to bottom for initial load, then only when user is at or near the bottom
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            val layoutInfo = listState.layoutInfo
+            val firstVisibleIndex = layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: -1
+            
+            // With reverseLayout=true and reversed data, index 0 is the latest message at the bottom
+            val isFirstLoad = !hasScrolledToInitialPosition
+            val isNearLatest = firstVisibleIndex <= 2
+            
+            if (isFirstLoad || isNearLatest) {
+                listState.animateScrollToItem(0)
+                if (isFirstLoad) {
+                    hasScrolledToInitialPosition = true
+                }
+            }
         }
     }
 
@@ -60,9 +75,11 @@ fun MessagesList(
     LaunchedEffect(scrollTrigger) {
         if (scrollTrigger > 0) {
             scrollToMessageId?.let { messageId ->
-                val messageIndex = messages.indexOfFirst { it.id == messageId }
-                if (messageIndex >= 0) {
-                    listState.animateScrollToItem(messageIndex)
+                val originalIndex = messages.indexOfFirst { it.id == messageId }
+                if (originalIndex >= 0) {
+                    // Convert to reversed index since we use messages.asReversed() with reverseLayout
+                    val reversedIndex = messages.lastIndex - originalIndex
+                    listState.animateScrollToItem(reversedIndex)
                 }
             }
         }
@@ -71,10 +88,11 @@ fun MessagesList(
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier,
+        reverseLayout = true
     ) {
-        items(messages, key = { it.id }) { message ->
+        items(messages.asReversed(), key = { it.id }) { message ->
             val shouldShowMessage = when {
                 !message.isViewOnce -> true
                 message.senderPeerID == meshService.myPeerID -> true

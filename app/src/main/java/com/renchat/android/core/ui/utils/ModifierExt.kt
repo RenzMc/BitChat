@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 fun Modifier.singleOrTripleClickable(
     onSingleClick: () -> Unit,
     onTripleClick: () -> Unit,
-    clickTimeThreshold: Long = 300L
+    clickTimeThreshold: Long = 350L
 ): Modifier = composed {
     var tapCount by remember { mutableIntStateOf(0) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
