@@ -261,9 +261,8 @@ class ChatViewModel(
     }
     
     private fun processSendMessage(content: String) {
-        
-            // Check for commands
-            if (content.startsWith("/")) {
+        // Check for commands
+        if (content.startsWith("/")) {
                 commandProcessor.processCommand(content, meshService, meshService.myPeerID, { messageContent, mentions, channel ->
                     meshService.sendMessage(messageContent, mentions, channel)
                 }, this)

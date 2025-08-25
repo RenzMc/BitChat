@@ -151,16 +151,23 @@ class AntiSpamManager private constructor(private val context: Context) {
         val userKey = getUserIdentifier(peerID)
         val currentTime = System.currentTimeMillis()
         
-        // Check if user is muted
-        if (isUserMuted(peerID)) {
-            val timeRemaining = getMuteTimeRemaining(peerID)
+        // Check if user is muted (inline to avoid nested mutex lock)
+        val muteEndTime = prefs.getLong("mute_end_$userKey", 0L)
+        if (muteEndTime > currentTime) {
+            val timeRemaining = muteEndTime - currentTime
             val minutesRemaining = (timeRemaining / 60000L).toInt()
+            Log.d(TAG, "User $peerID is muted until ${Date(muteEndTime)}")
             return@withLock AntiSpamResult(
                 allowed = false,
                 warning = "Anda di-mute karena spam. Waktu tersisa: $minutesRemaining menit",
                 muteTimeRemaining = timeRemaining,
                 action = SpamAction.MUTED
             )
+        }
+        
+        // Clean up expired mute
+        if (muteEndTime > 0) {
+            prefs.edit().remove("mute_end_$userKey").apply()
         }
         
         // Get or create message timestamp list for this user
