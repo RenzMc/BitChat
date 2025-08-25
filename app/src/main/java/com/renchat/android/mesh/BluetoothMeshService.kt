@@ -483,7 +483,7 @@ class BluetoothMeshService(private val context: Context) {
                 Log.d(TAG, "📤 Sent BitChat compatible public message: ${content.take(30)}...")
                 
                 // Store for forward to offline peers
-                storeForwardManager.cacheMessage(signedPacket, message.messageID ?: java.util.UUID.randomUUID().toString())
+                storeForwardManager.cacheMessage(signedPacket, message.id)
             } else {
                 Log.e(TAG, "Failed to encode message in BitChat format")
             }
