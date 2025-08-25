@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.bitchat.android.model.BitchatMessage
 import com.bitchat.android.model.DeliveryStatus
 import com.bitchat.android.mesh.BluetoothMeshService
+import com.bitchat.android.ui.ViewOnceMessage
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,7 +44,9 @@ fun MessagesList(
     forceScrollToBottom: Boolean = false,
     onScrolledUpChanged: ((Boolean) -> Unit)? = null,
     onNicknameClick: ((String) -> Unit)? = null,
-    onMessageLongPress: ((BitchatMessage) -> Unit)? = null
+    onMessageLongPress: ((BitchatMessage) -> Unit)? = null,
+    onViewOnceMessage: ((BitchatMessage) -> Unit)? = null,
+    viewedOnceMessages: Set<String> = emptySet()
 ) {
     val listState = rememberLazyListState()
     
@@ -101,7 +104,9 @@ fun MessagesList(
                     currentUserNickname = currentUserNickname,
                     meshService = meshService,
                     onNicknameClick = onNicknameClick,
-                    onMessageLongPress = onMessageLongPress
+                    onMessageLongPress = onMessageLongPress,
+                    onViewOnceMessage = onViewOnceMessage,
+                    isViewOnceViewed = viewedOnceMessages.contains(message.id)
                 )
         }
     }
@@ -114,7 +119,9 @@ fun MessageItem(
     currentUserNickname: String,
     meshService: BluetoothMeshService,
     onNicknameClick: ((String) -> Unit)? = null,
-    onMessageLongPress: ((BitchatMessage) -> Unit)? = null
+    onMessageLongPress: ((BitchatMessage) -> Unit)? = null,
+    onViewOnceMessage: ((BitchatMessage) -> Unit)? = null,
+    isViewOnceViewed: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val timeFormatter = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
@@ -123,22 +130,31 @@ fun MessageItem(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            // Create a custom layout that combines selectable text with clickable nickname areas
-            MessageTextWithClickableNicknames(
+        // Check if this is a View Once message
+        if (message.isViewOnce) {
+            ViewOnceMessage(
                 message = message,
-                currentUserNickname = currentUserNickname,
-                meshService = meshService,
-                colorScheme = colorScheme,
-                timeFormatter = timeFormatter,
-                onNicknameClick = onNicknameClick,
-                onMessageLongPress = onMessageLongPress,
-                modifier = Modifier.weight(1f)
+                isViewed = isViewOnceViewed,
+                onViewMessage = { onViewOnceMessage?.invoke(message) },
+                modifier = Modifier.fillMaxWidth()
             )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                // Create a custom layout that combines selectable text with clickable nickname areas
+                MessageTextWithClickableNicknames(
+                    message = message,
+                    currentUserNickname = currentUserNickname,
+                    meshService = meshService,
+                    colorScheme = colorScheme,
+                    timeFormatter = timeFormatter,
+                    onNicknameClick = onNicknameClick,
+                    onMessageLongPress = onMessageLongPress,
+                    modifier = Modifier.weight(1f)
+                )
             
             // Delivery status for private messages
             if (message.isPrivate && message.sender == currentUserNickname) {
@@ -148,23 +164,25 @@ fun MessageItem(
             }
         }
         
-        // Link preview pills for URLs in message content
-        if (message.sender != "system") {
-            val urls = URLDetector.extractUrls(message.content)
-            if (urls.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 3.dp, start = 1.dp, end = 1.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    // Show up to 3 URL previews (matches iOS behavior)
-                    urls.take(3).forEach { urlMatch ->
-                        LinkPreviewPill(
-                            url = urlMatch.url,
-                            title = null,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                // Link preview pills for URLs in message content (only for non-View Once messages)
+                if (message.sender != "system") {
+                    val urls = URLDetector.extractUrls(message.content)
+                    if (urls.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 3.dp, start = 1.dp, end = 1.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            // Show up to 3 URL previews (matches iOS behavior)
+                            urls.take(3).forEach { urlMatch ->
+                                LinkPreviewPill(
+                                    url = urlMatch.url,
+                                    title = null,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
             }

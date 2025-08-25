@@ -352,7 +352,7 @@ class AntiSpamManager private constructor(private val context: Context) {
         return@withLock mapOf(
             "activeUsers" to userMessageTimestamps.size,
             "activeMutes" to activeMutes,
-            "deviceFingerprint" to deviceFingerprint.take(8),
+            "deviceFingerprint" to hardwareFingerprint.take(8),
             "maxMessagesPerMinute" to MAX_MESSAGES_PER_MINUTE,
             "muteDurationMinutes" to (MUTE_DURATION_MS / 60000L)
         )

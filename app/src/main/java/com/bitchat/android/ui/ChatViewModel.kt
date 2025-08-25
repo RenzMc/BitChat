@@ -300,8 +300,14 @@ class ChatViewModel(
             // Check if we're in a location channel
             val selectedLocationChannel = state.selectedLocationChannel.value
             if (selectedLocationChannel is com.bitchat.android.geohash.ChannelID.Location) {
-                // Send to geohash channel via Nostr ephemeral event
+                // Send to geohash channel via Nostr ephemeral event  
+                // NOTE: Geohash messages via Nostr don't support View Once yet - this is a known limitation
                 nostrGeohashService.sendGeohashMessage(content, selectedLocationChannel.channel, meshService.myPeerID, state.getNicknameValue())
+                
+                // Reset View Once state for geohash messages too (even though not supported)
+                if (state.getIsViewOnceEnabledValue()) {
+                    state.setIsViewOnceEnabled(false)
+                }
             } else {
                 // Send public/channel message via mesh
                 val message = BitchatMessage(

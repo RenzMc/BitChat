@@ -80,6 +80,7 @@ class PrivateChatManager(
         recipientNickname: String?,
         senderNickname: String?,
         myPeerID: String,
+        isViewOnce: Boolean = false,
         onSendMessage: (String, String, String, String) -> Unit
     ): Boolean {
         if (isPeerBlocked(peerID)) {
@@ -101,7 +102,8 @@ class PrivateChatManager(
             isPrivate = true,
             recipientNickname = recipientNickname,
             senderPeerID = myPeerID,
-            deliveryStatus = DeliveryStatus.Sending
+            deliveryStatus = DeliveryStatus.Sending,
+            isViewOnce = isViewOnce
         )
 
         messageManager.addPrivateMessage(peerID, message)
