@@ -650,21 +650,6 @@ class AntiSpamManager(
         }
     }
     
-    /**
-     * Get mute status message for current user if they are muted
-     */
-    fun getMuteStatusMessage(): String? {
-        val deviceFingerprint = getDeviceFingerprint()
-        if (isPeerMuted(deviceFingerprint)) {
-            val muteEndTime = getMuteEndTime(deviceFingerprint)
-            if (muteEndTime != null) {
-                val remainingTime = (muteEndTime - System.currentTimeMillis()) / 1000 / 60
-                return "🔇 You are muted for ${remainingTime} more minutes due to spam detection."
-            }
-            return "🔇 You are currently muted due to spam detection."
-        }
-        return null
-    }
     
     /**
      * Shutdown the manager

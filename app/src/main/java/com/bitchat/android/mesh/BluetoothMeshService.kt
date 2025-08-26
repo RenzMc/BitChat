@@ -514,7 +514,7 @@ class BluetoothMeshService(private val context: Context) {
             if (muteMessage != null) {
                 val systemMessage = BitchatMessage(
                     sender = "system",
-                    content = muteMessage,
+                    content = muteMessage ?: "You are muted",
                     timestamp = java.util.Date(),
                     isRelay = false
                 )
@@ -582,7 +582,7 @@ class BluetoothMeshService(private val context: Context) {
             if (muteMessage != null) {
                 val systemMessage = BitchatMessage(
                     sender = "system",
-                    content = muteMessage,
+                    content = muteMessage ?: "You are muted",
                     timestamp = java.util.Date(),
                     isRelay = false
                 )

@@ -31,7 +31,7 @@ class PacketProcessor(
     var delegate: PacketProcessorDelegate? = null
     
     // Anti-spam manager for comprehensive spam protection
-    private val antiSpamManager = AntiSpamManager(context, object : AntiSpamManagerDelegate {
+    val antiSpamManager = AntiSpamManager(context, object : AntiSpamManagerDelegate {
         override fun onSpamWarningIssued(peerID: String, warningCount: Int, reason: String) {
             delegate?.onSpamWarningIssued(peerID, warningCount, reason)
         }
