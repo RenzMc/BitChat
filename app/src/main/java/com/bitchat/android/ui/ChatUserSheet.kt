@@ -14,6 +14,10 @@ import androidx.compose.ui.unit.sp
 import com.bitchat.android.ui.theme.BASE_FONT_SIZE
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import com.bitchat.android.model.BitchatMessage
 
@@ -32,7 +36,8 @@ fun ChatUserSheet(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val clipboardManager = androidx.compose.ui.platform.LocalClipboard.current
+    val context = LocalContext.current
+    val systemClipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     
     // Bottom sheet state
     val sheetState = rememberModalBottomSheetState(
@@ -88,7 +93,8 @@ fun ChatUserSheet(
                                 titleColor = standardGrey,
                                 onClick = {
                                     // Copy the message content to clipboard
-                                    clipboardManager.setText(AnnotatedString(message.content))
+                                    val clipData = ClipData.newPlainText("message", message.content)
+                                    systemClipboard.setPrimaryClip(clipData)
                                     onDismiss()
                                 }
                             )
