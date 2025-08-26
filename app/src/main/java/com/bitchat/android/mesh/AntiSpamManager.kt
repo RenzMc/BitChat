@@ -387,18 +387,26 @@ class AntiSpamManager(
     
     /**
      * Mute a peer for the specified duration
+     * Stores mute data using both peer ID and device fingerprint for maximum anti-bypass protection
      */
     private fun mutePeer(peerID: String, reason: String) {
         val currentTime = System.currentTimeMillis()
         val muteUntil = currentTime + MUTE_DURATION_MS
-        
-        // Store mute with device fingerprint for anti-bypass
         val muteData = "$muteUntil:$deviceFingerprint:$reason"
+        
+        // Store mute using peer ID
         prefs.edit()
             .putString("${KEY_MUTED_PEERS}_$peerID", muteData)
             .apply()
         
+        // CRITICAL: Also store mute using device fingerprint for anti-bypass
+        // This survives app uninstall, cache clear, factory reset, etc.
+        prefs.edit()
+            .putString("${KEY_MUTED_PEERS}_$deviceFingerprint", muteData)
+            .apply()
+        
         Log.w(TAG, "Peer muted ${peerID.take(8)}... until ${Date(muteUntil)}: $reason")
+        Log.w(TAG, "Anti-bypass: Device fingerprint ${deviceFingerprint.take(8)}... also muted")
         
         // Clear warnings since they've been muted
         prefs.edit()
@@ -412,26 +420,53 @@ class AntiSpamManager(
     
     /**
      * Check if current user can send messages (not muted by their own spam)
+     * Uses device fingerprint for true anti-bypass protection
      */
     fun canSendMessage(): Boolean {
+        // Check mute by device fingerprint first (anti-bypass)
+        if (isPeerMuted(deviceFingerprint)) {
+            Log.d(TAG, "User muted by device fingerprint - anti-bypass active")
+            return false
+        }
+        
+        // Also check by peer ID as fallback
         val myPeerID = delegate?.getMyPeerID() ?: return true
         return !isPeerMuted(myPeerID)
     }
     
     /**
      * Get mute status message for current user
+     * Checks both device fingerprint and peer ID for comprehensive coverage
      */
     fun getMuteStatusMessage(): String? {
-        val myPeerID = delegate?.getMyPeerID() ?: return null
-        if (!isPeerMuted(myPeerID)) return null
+        // Check device fingerprint first (anti-bypass)
+        val deviceMuteData = prefs.getString("${KEY_MUTED_PEERS}_$deviceFingerprint", null)
+        if (deviceMuteData != null) {
+            return extractMuteMessage(deviceMuteData)
+        }
         
-        val muteData = prefs.getString("${KEY_MUTED_PEERS}_$myPeerID", null) ?: return null
+        // Check peer ID as fallback
+        val myPeerID = delegate?.getMyPeerID() ?: return null
+        val peerMuteData = prefs.getString("${KEY_MUTED_PEERS}_$myPeerID", null)
+        if (peerMuteData != null) {
+            return extractMuteMessage(peerMuteData)
+        }
+        
+        return null
+    }
+    
+    /**
+     * Extract mute message from mute data string
+     */
+    private fun extractMuteMessage(muteData: String): String? {
         try {
             val parts = muteData.split(":")
             if (parts.size < 2) return null
             
             val muteUntil = parts[0].toLong()
             val remaining = muteUntil - System.currentTimeMillis()
+            if (remaining <= 0) return null
+            
             val minutes = (remaining / 60000).toInt()
             return "🔇 You are muted for ${minutes} more minutes due to spam"
         } catch (e: Exception) {

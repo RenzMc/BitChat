@@ -240,15 +240,24 @@ class ChatViewModel(
     fun sendMessage(content: String) {
         if (content.isEmpty()) return
         
-        // Quick anti-spam check at UI level (additional protection)
+        // Check if user is muted by anti-spam system first
+        if (!meshService.packetProcessor.canSendMessage()) {
+            val muteMessage = meshService.packetProcessor.antiSpamManager.getMuteStatusMessage()
+            if (muteMessage != null) {
+                val systemMessage = BitchatMessage(
+                    sender = "system",
+                    content = muteMessage,
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                messageManager.addMessage(systemMessage)
+            }
+            return
+        }
+        
+        // Quick rate limit check at UI level (no spam message)
         if (!canSendMessageNow()) {
-            val systemMessage = BitchatMessage(
-                sender = "system",
-                content = "🔇 Please wait before sending another message",
-                timestamp = java.util.Date(),
-                isRelay = false
-            )
-            messageManager.addMessage(systemMessage)
+            // Silently drop message - no spam log
             return
         }
         
