@@ -104,8 +104,8 @@ class AntiSpamManager(
         senderIP: String? = null
     ): SpamCheckResult {
         
-        // Skip checking our own packets
-        if (peerID.isEmpty() || peerID == delegate?.getMyPeerID()) {
+        // Skip checking empty peer IDs only
+        if (peerID.isEmpty()) {
             return SpamCheckResult.ALLOWED
         }
         
@@ -522,18 +522,18 @@ class AntiSpamManager(
         try {
             val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            // Use alternative method for MAC address since connectionInfo.macAddress is deprecated
+            // Use secure device identifier instead of MAC address (privacy-friendly)
             val macAddress = try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    // Use network interfaces for newer Android versions
+                    // Use network interfaces for newer Android versions (privacy-compliant)
                     val networkInterfaces = java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())
-                    networkInterfaces.find { it.name == "wlan0" }?.hardwareAddress?.joinToString(":") { "%02x".format(it) } ?: "unknown"
+                    networkInterfaces.find { it.name == "wlan0" }?.hardwareAddress?.joinToString(":") { "%02x".format(it) } ?: "device_specific"
                 } else {
-                    @Suppress("DEPRECATION")
-                    wifiManager?.connectionInfo?.macAddress ?: "unknown"
+                    // For older versions, use a consistent device identifier
+                    "device_specific"
                 }
             } catch (e: Exception) {
-                "unknown"
+                "device_specific"
             }
             
             // Combine multiple device identifiers

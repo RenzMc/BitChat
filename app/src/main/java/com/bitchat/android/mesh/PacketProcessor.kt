@@ -7,7 +7,6 @@ import com.bitchat.android.protocol.MessageType
 import com.bitchat.android.model.RoutedPacket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.actor
 
 /**
  * Processes incoming packets and routes them to appropriate handlers
@@ -64,29 +63,33 @@ class PacketProcessor(
     // Coroutines
     private val processorScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
-    // Per-peer actors to serialize packet processing
-    // Each peer gets its own actor that processes packets sequentially
+    // Per-peer channels to serialize packet processing
+    // Each peer gets its own channel that processes packets sequentially
     // This prevents race conditions in session management
-    private val peerActors = mutableMapOf<String, CompletableDeferred<Unit>>()
+    private val peerChannels = mutableMapOf<String, Channel<RoutedPacket>>()
+    private val peerJobs = mutableMapOf<String, Job>()
     
-    @OptIn(ObsoleteCoroutinesApi::class)
-    private fun getOrCreateActorForPeer(peerID: String) = processorScope.actor<RoutedPacket>(
-        capacity = Channel.UNLIMITED
-    ) {
-        Log.d(TAG, "🎭 Created packet actor for peer: ${formatPeerForLog(peerID)}")
-        try {
-            for (packet in channel) {
-                Log.d(TAG, "📦 Processing packet type ${packet.packet.type} from ${formatPeerForLog(peerID)} (serialized)")
-                handleReceivedPacket(packet)
-                Log.d(TAG, "Completed packet type ${packet.packet.type} from ${formatPeerForLog(peerID)}")
+    private fun getOrCreateChannelForPeer(peerID: String): Channel<RoutedPacket> {
+        return peerChannels.getOrPut(peerID) {
+            val channel = Channel<RoutedPacket>(Channel.UNLIMITED)
+            val job = processorScope.launch {
+                Log.d(TAG, "🎭 Created packet processor for peer: ${formatPeerForLog(peerID)}")
+                try {
+                    for (packet in channel) {
+                        Log.d(TAG, "📦 Processing packet type ${packet.packet.type} from ${formatPeerForLog(peerID)} (serialized)")
+                        handleReceivedPacket(packet)
+                        Log.d(TAG, "Completed packet type ${packet.packet.type} from ${formatPeerForLog(peerID)}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in packet processor for ${formatPeerForLog(peerID)}: ${e.message}")
+                } finally {
+                    Log.d(TAG, "🎭 Packet processor for ${formatPeerForLog(peerID)} terminated")
+                }
             }
-        } finally {
-            Log.d(TAG, "🎭 Packet actor for ${formatPeerForLog(peerID)} terminated")
+            peerJobs[peerID] = job
+            channel
         }
     }
-    
-    // Cache actors to reuse them
-    private val actors = mutableMapOf<String, kotlinx.coroutines.channels.SendChannel<RoutedPacket>>()
     
     init {
         // Set up the packet relay manager delegate immediately
@@ -108,16 +111,16 @@ class PacketProcessor(
 
 
         
-        // Get or create actor for this peer
-        val actor = actors.getOrPut(peerID) { getOrCreateActorForPeer(peerID) }
+        // Get or create channel for this peer
+        val channel = getOrCreateChannelForPeer(peerID)
         
-        // Send packet to peer's dedicated actor for serialized processing
+        // Send packet to peer's dedicated channel for serialized processing
         processorScope.launch {
             try {
-                actor.send(routed)
+                channel.send(routed)
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to send packet to actor for ${formatPeerForLog(peerID)}: ${e.message}")
-                // Fallback to direct processing if actor fails
+                Log.w(TAG, "Failed to send packet to channel for ${formatPeerForLog(peerID)}: ${e.message}")
+                // Fallback to direct processing if channel fails
                 handleReceivedPacket(routed)
             }
         }
@@ -292,12 +295,12 @@ class PacketProcessor(
         return buildString {
             appendLine("=== Packet Processor Debug Info ===")
             appendLine("Processor Scope Active: ${processorScope.isActive}")
-            appendLine("Active Peer Actors: ${actors.size}")
+            appendLine("Active Peer Channels: ${peerChannels.size}")
             appendLine("My Peer ID: $myPeerID")
             
-            if (actors.isNotEmpty()) {
-                appendLine("Peer Actors:")
-                actors.keys.forEach { peerID ->
+            if (peerChannels.isNotEmpty()) {
+                appendLine("Peer Channels:")
+                peerChannels.keys.forEach { peerID ->
                     appendLine("  - $peerID")
                 }
             }
@@ -323,6 +326,38 @@ class PacketProcessor(
      */
     fun canSendMessage(): Boolean {
         return antiSpamManager.canSendMessage()
+    }
+    
+    /**
+     * Check outgoing message for spam before sending
+     */
+    fun checkOutgoingSpam(packet: BitchatPacket, peerID: String): SpamCheckResult {
+        return antiSpamManager.checkPacketSpam(packet, peerID, null)
+    }
+    
+    /**
+     * Shutdown the packet processor and clean up resources
+     */
+    fun shutdown() {
+        Log.d(TAG, "Shutting down PacketProcessor")
+        
+        // Close all channels
+        peerChannels.values.forEach { channel ->
+            channel.close()
+        }
+        peerChannels.clear()
+        
+        // Cancel all jobs
+        peerJobs.values.forEach { job ->
+            job.cancel()
+        }
+        peerJobs.clear()
+        
+        // Cancel the processor scope
+        processorScope.cancel()
+        
+        Log.d(TAG, "PacketProcessor shutdown complete")
+    }
     }
     
     /**

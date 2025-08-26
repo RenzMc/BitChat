@@ -523,6 +523,35 @@ class BluetoothMeshService(private val context: Context) {
             return
         }
         
+        // Check outgoing message for spam before sending
+        val testPacket = BitchatPacket(
+            version = 1u,
+            type = com.bitchat.android.protocol.MessageType.MESSAGE.value,
+            senderID = hexStringToByteArray(myPeerID),
+            recipientID = if (channel != null) null else com.bitchat.android.protocol.SpecialRecipients.BROADCAST,
+            timestamp = System.currentTimeMillis().toULong(),
+            payload = content.toByteArray(Charsets.UTF_8),
+            ttl = MAX_TTL
+        )
+        
+        val spamCheck = packetProcessor.checkOutgoingSpam(testPacket, myPeerID)
+        if (spamCheck != SpamCheckResult.ALLOWED) {
+            val warningMessage = when (spamCheck) {
+                SpamCheckResult.BLOCKED_RATE_LIMIT -> "⚠️ Message rate limit exceeded. Please slow down."
+                SpamCheckResult.BLOCKED_CONTENT_SPAM -> "⚠️ Message blocked: spam content detected."
+                SpamCheckResult.BLOCKED_MUTED -> "🔇 You are muted due to spam. Wait before sending again."
+                else -> "⚠️ Message blocked due to spam protection."
+            }
+            val systemMessage = BitchatMessage(
+                sender = "system",
+                content = warningMessage,
+                timestamp = java.util.Date(),
+                isRelay = false
+            )
+            delegate?.didReceiveMessage(systemMessage)
+            return
+        }
+        
         serviceScope.launch {
             val packet = BitchatPacket(
                 version = 1u,
@@ -559,6 +588,35 @@ class BluetoothMeshService(private val context: Context) {
                 )
                 delegate?.didReceiveMessage(systemMessage)
             }
+            return
+        }
+        
+        // Check outgoing private message for spam before sending
+        val testPacket = BitchatPacket(
+            version = 1u,
+            type = com.bitchat.android.protocol.MessageType.NOISE_ENCRYPTED.value,
+            senderID = hexStringToByteArray(myPeerID),
+            recipientID = hexStringToByteArray(recipientPeerID),
+            timestamp = System.currentTimeMillis().toULong(),
+            payload = content.toByteArray(Charsets.UTF_8),
+            ttl = MAX_TTL
+        )
+        
+        val spamCheck = packetProcessor.checkOutgoingSpam(testPacket, myPeerID)
+        if (spamCheck != SpamCheckResult.ALLOWED) {
+            val warningMessage = when (spamCheck) {
+                SpamCheckResult.BLOCKED_RATE_LIMIT -> "⚠️ Private message rate limit exceeded. Please slow down."
+                SpamCheckResult.BLOCKED_CONTENT_SPAM -> "⚠️ Private message blocked: spam content detected."
+                SpamCheckResult.BLOCKED_MUTED -> "🔇 You are muted due to spam. Wait before sending again."
+                else -> "⚠️ Private message blocked due to spam protection."
+            }
+            val systemMessage = BitchatMessage(
+                sender = "system",
+                content = warningMessage,
+                timestamp = java.util.Date(),
+                isRelay = false
+            )
+            delegate?.didReceiveMessage(systemMessage)
             return
         }
         

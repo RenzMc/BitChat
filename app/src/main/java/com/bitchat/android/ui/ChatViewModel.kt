@@ -240,6 +240,18 @@ class ChatViewModel(
     fun sendMessage(content: String) {
         if (content.isEmpty()) return
         
+        // Quick anti-spam check at UI level (additional protection)
+        if (!canSendMessageNow()) {
+            val systemMessage = BitchatMessage(
+                sender = "system",
+                content = "🔇 Please wait before sending another message",
+                timestamp = java.util.Date(),
+                isRelay = false
+            )
+            messageManager.addMessage(systemMessage)
+            return
+        }
+        
         // Check for commands
         if (content.startsWith("/")) {
             commandProcessor.processCommand(content, meshService, meshService.myPeerID, { messageContent, mentions, channel ->
@@ -330,6 +342,34 @@ class ChatViewModel(
         }
     }
     
+    // Basic rate limiting at UI level (additional protection)
+    private var lastMessageTime = 0L
+    private var messageCount = 0
+    private val MESSAGE_INTERVAL_MS = 3000L // 3 seconds between messages (UI level protection)
+    private val BURST_LIMIT = 3 // Allow 3 messages in quick succession
+    
+    /**
+     * Check if user can send message now (UI level rate limiting)
+     */
+    private fun canSendMessageNow(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        
+        // Reset count if enough time has passed
+        if (currentTime - lastMessageTime > MESSAGE_INTERVAL_MS * 2) {
+            messageCount = 0
+        }
+        
+        // Check if within burst limit
+        if (messageCount >= BURST_LIMIT && currentTime - lastMessageTime < MESSAGE_INTERVAL_MS) {
+            return false
+        }
+        
+        // Update counters
+        lastMessageTime = currentTime
+        messageCount++
+        
+        return true
+    }
 
     
     // MARK: - Utility Functions
