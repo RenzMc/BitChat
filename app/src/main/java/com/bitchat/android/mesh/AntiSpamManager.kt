@@ -738,4 +738,9 @@ interface AntiSpamManagerDelegate {
      * Get the current peer ID for this device
      */
     fun getMyPeerID(): String
+    
+    /**
+     * Get the current peer ID for this device
+     */
+    fun getMyPeerID(): String
 }

@@ -11,6 +11,7 @@ import com.bitchat.android.mesh.BluetoothMeshService
 import com.bitchat.android.model.BitchatMessage
 import com.bitchat.android.protocol.BitchatPacket
 import com.bitchat.android.nostr.NostrGeohashService
+import com.bitchat.android.util.dataFromHexString
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -255,7 +256,41 @@ class ChatViewModel(
             return
         }
         
-        // Quick rate limit check at UI level (no spam message)
+        // FIXED: Check outgoing message for spam before sending
+        // Create a simulated packet to test against anti-spam
+        val testPacket = com.bitchat.android.protocol.BitchatPacket(
+            version = 1u,
+            type = com.bitchat.android.protocol.MessageType.MESSAGE.value,
+            senderID = meshService.myPeerID.dataFromHexString() ?: ByteArray(32),
+            recipientID = null, // Public message
+            timestamp = System.currentTimeMillis().toULong(),
+            payload = content.toByteArray(Charsets.UTF_8),
+            signature = null,
+            ttl = 7u
+        )
+        
+        val spamResult = meshService.packetProcessor.checkOutgoingSpam(testPacket, meshService.myPeerID)
+        when (spamResult) {
+            com.bitchat.android.mesh.SpamCheckResult.BLOCKED_RATE_LIMIT,
+            com.bitchat.android.mesh.SpamCheckResult.BLOCKED_CONTENT_SPAM,
+            com.bitchat.android.mesh.SpamCheckResult.BLOCKED_MUTED -> {
+                val muteMessage = meshService.packetProcessor.antiSpamManager.getMuteStatusMessage()
+                    ?: "🔇 Message blocked by anti-spam system"
+                val systemMessage = BitchatMessage(
+                    sender = "system",
+                    content = muteMessage,
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                messageManager.addMessage(systemMessage)
+                return
+            }
+            else -> {
+                // Continue with sending
+            }
+        }
+        
+        // Quick rate limit check at UI level (additional protection)
         if (!canSendMessageNow()) {
             // Silently drop message - no spam log
             return
