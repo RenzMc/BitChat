@@ -47,7 +47,7 @@ class BluetoothMeshService(private val context: Context) {
     private val storeForwardManager = StoreForwardManager()
     private val messageHandler = MessageHandler(myPeerID)
     internal val connectionManager = BluetoothConnectionManager(context, myPeerID, fragmentManager) // Made internal for access
-    private val packetProcessor = PacketProcessor(myPeerID, context)
+    val packetProcessor = PacketProcessor(myPeerID, context)
     
     // Service state management
     private var isActive = false
