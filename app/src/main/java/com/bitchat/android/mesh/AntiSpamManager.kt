@@ -37,19 +37,19 @@ class AntiSpamManager(
     companion object {
         private const val TAG = "AntiSpamManager"
         
-        // Rate limiting constants - made more aggressive for 100% spam detection
+        // Rate limiting constants - user-friendly settings for normal users
         private const val RATE_LIMIT_WINDOW_MS = 60_000L // 1 minute
-        private const val RATE_LIMIT_THRESHOLD = 8 // messages per minute (reduced from 15)
+        private const val RATE_LIMIT_THRESHOLD = 15 // messages per minute (user-friendly)
         
-        // Warning system constants - stricter for better spam control
-        private const val MAX_WARNINGS = 2 // reduced from 3
-        private const val MUTE_DURATION_MS = 7_200_000L // 2 hours (increased from 1 hour)
+        // Warning system constants - balanced for user experience
+        private const val MAX_WARNINGS = 3 // warnings before mute
+        private const val MUTE_DURATION_MS = 3_600_000L // 1 hour mute
         private const val WARNING_DECAY_PERIOD_MS = 600_000L // 10 minutes normal behavior to decay 1 warning (increased)
         
-        // Content analysis constants - more sensitive detection
-        private const val SPAM_SIMILARITY_THRESHOLD = 0.70 // 70% similar content is spam (reduced from 85%)
-        private const val SPAM_CONTENT_HISTORY_SIZE = 15 // increased history size
-        private const val REPEATED_CONTENT_THRESHOLD = 2 // Same message 2+ times = spam (reduced from 3)
+        // Content analysis constants - balanced detection
+        private const val SPAM_SIMILARITY_THRESHOLD = 0.85 // 85% similar content is spam
+        private const val SPAM_CONTENT_HISTORY_SIZE = 10 // content history size
+        private const val REPEATED_CONTENT_THRESHOLD = 3 // Same message 3+ times = spam
         
         // IP limiting constants - stricter bot prevention
         private const val IP_RATE_LIMIT_WINDOW_MS = 300_000L // 5 minutes
@@ -648,6 +648,22 @@ class AntiSpamManager(
                 }
             }
         }
+    }
+    
+    /**
+     * Get mute status message for current user if they are muted
+     */
+    fun getMuteStatusMessage(): String? {
+        val deviceFingerprint = getDeviceFingerprint()
+        if (isPeerMuted(deviceFingerprint)) {
+            val muteEndTime = getMuteEndTime(deviceFingerprint)
+            if (muteEndTime != null) {
+                val remainingTime = (muteEndTime - System.currentTimeMillis()) / 1000 / 60
+                return "🔇 You are muted for ${remainingTime} more minutes due to spam detection."
+            }
+            return "🔇 You are currently muted due to spam detection."
+        }
+        return null
     }
     
     /**

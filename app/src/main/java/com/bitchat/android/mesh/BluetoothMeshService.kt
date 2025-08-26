@@ -510,7 +510,7 @@ class BluetoothMeshService(private val context: Context) {
         
         // Check if user is muted before sending
         if (!packetProcessor.canSendMessage()) {
-            val muteMessage = packetProcessor.getMuteStatusMessage()
+            val muteMessage = packetProcessor.antiSpamManager.getMuteStatusMessage()
             if (muteMessage != null) {
                 val systemMessage = BitchatMessage(
                     sender = "system",
@@ -578,7 +578,7 @@ class BluetoothMeshService(private val context: Context) {
         
         // Check if user is muted before sending
         if (!packetProcessor.canSendMessage()) {
-            val muteMessage = packetProcessor.getMuteStatusMessage()
+            val muteMessage = packetProcessor.antiSpamManager.getMuteStatusMessage()
             if (muteMessage != null) {
                 val systemMessage = BitchatMessage(
                     sender = "system",

@@ -358,38 +358,6 @@ class PacketProcessor(
         
         Log.d(TAG, "PacketProcessor shutdown complete")
     }
-    }
-    
-    /**
-     * Get mute status message for current user
-     */
-    fun getMuteStatusMessage(): String? {
-        return antiSpamManager.getMuteStatusMessage()
-    }
-    
-    /**
-     * Shutdown the processor and all peer actors
-     */
-    fun shutdown() {
-        Log.d(TAG, "Shutting down PacketProcessor and ${actors.size} peer actors")
-        
-        // Close all peer actors gracefully
-        actors.values.forEach { actor ->
-            actor.close()
-        }
-        actors.clear()
-        
-        // Shutdown the relay manager
-        packetRelayManager.shutdown()
-        
-        // Shutdown the anti-spam manager
-        antiSpamManager.shutdown()
-        
-        // Cancel the main scope
-        processorScope.cancel()
-        
-        Log.d(TAG, "PacketProcessor shutdown complete")
-    }
 }
 
 /**

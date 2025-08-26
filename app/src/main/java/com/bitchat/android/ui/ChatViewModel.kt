@@ -345,8 +345,8 @@ class ChatViewModel(
     // Basic rate limiting at UI level (additional protection)
     private var lastMessageTime = 0L
     private var messageCount = 0
-    private val MESSAGE_INTERVAL_MS = 3000L // 3 seconds between messages (UI level protection)
-    private val BURST_LIMIT = 3 // Allow 3 messages in quick succession
+    private val MESSAGE_INTERVAL_MS = 2000L // 2 seconds between messages (UI level protection) 
+    private val BURST_LIMIT = 4 // Allow 4 messages in quick succession
     
     /**
      * Check if user can send message now (UI level rate limiting)
