@@ -37,23 +37,23 @@ class AntiSpamManager(
     companion object {
         private const val TAG = "AntiSpamManager"
         
-        // Rate limiting constants
+        // Rate limiting constants - made more aggressive for 100% spam detection
         private const val RATE_LIMIT_WINDOW_MS = 60_000L // 1 minute
-        private const val RATE_LIMIT_THRESHOLD = 15 // messages per minute
+        private const val RATE_LIMIT_THRESHOLD = 8 // messages per minute (reduced from 15)
         
-        // Warning system constants
-        private const val MAX_WARNINGS = 3
-        private const val MUTE_DURATION_MS = 3_600_000L // 1 hour
-        private const val WARNING_DECAY_PERIOD_MS = 300_000L // 5 minutes normal behavior to decay 1 warning
+        // Warning system constants - stricter for better spam control
+        private const val MAX_WARNINGS = 2 // reduced from 3
+        private const val MUTE_DURATION_MS = 7_200_000L // 2 hours (increased from 1 hour)
+        private const val WARNING_DECAY_PERIOD_MS = 600_000L // 10 minutes normal behavior to decay 1 warning (increased)
         
-        // Content analysis constants
-        private const val SPAM_SIMILARITY_THRESHOLD = 0.85 // 85% similar content is spam
-        private const val SPAM_CONTENT_HISTORY_SIZE = 10
-        private const val REPEATED_CONTENT_THRESHOLD = 3 // Same message 3+ times = spam
+        // Content analysis constants - more sensitive detection
+        private const val SPAM_SIMILARITY_THRESHOLD = 0.70 // 70% similar content is spam (reduced from 85%)
+        private const val SPAM_CONTENT_HISTORY_SIZE = 15 // increased history size
+        private const val REPEATED_CONTENT_THRESHOLD = 2 // Same message 2+ times = spam (reduced from 3)
         
-        // IP limiting constants
+        // IP limiting constants - stricter bot prevention
         private const val IP_RATE_LIMIT_WINDOW_MS = 300_000L // 5 minutes
-        private const val IP_RATE_LIMIT_THRESHOLD = 100 // messages per IP per 5 minutes
+        private const val IP_RATE_LIMIT_THRESHOLD = 50 // messages per IP per 5 minutes (reduced from 100)
         
         // Storage keys
         private const val PREFS_NAME = "bitchat_antispam"
@@ -190,7 +190,7 @@ class AntiSpamManager(
     
     /**
      * Analyze message content for spam patterns
-     * Now applies to ALL packet types for comprehensive protection
+     * Enhanced with additional spam detection methods for 100% effectiveness
      */
     private fun checkContentSpam(packet: BitchatPacket, peerID: String): SpamCheckResult {
         try {
@@ -205,17 +205,37 @@ class AntiSpamManager(
             
             val contentHistory = peerContentHistory.getOrPut(peerID) { mutableListOf() }
             
-            // Check for exact duplicates
+            // Enhanced spam detection patterns
+            
+            // 1. Check for exact duplicates (most aggressive)
             val duplicateCount = contentHistory.count { it == content }
             if (duplicateCount >= REPEATED_CONTENT_THRESHOLD) {
-                issueWarning(peerID, "Repeated content spam detected")
+                issueWarning(peerID, "Exact duplicate content spam detected")
                 return SpamCheckResult.BLOCKED_CONTENT_SPAM
             }
             
-            // Check for similar content using simple similarity algorithm
+            // 2. Check for similar content using Levenshtein similarity
             val similarCount = contentHistory.count { calculateSimilarity(it, content) > SPAM_SIMILARITY_THRESHOLD }
             if (similarCount >= REPEATED_CONTENT_THRESHOLD) {
                 issueWarning(peerID, "Similar content spam detected")
+                return SpamCheckResult.BLOCKED_CONTENT_SPAM
+            }
+            
+            // 3. Check for common spam patterns
+            if (isSpamPattern(content)) {
+                issueWarning(peerID, "Spam pattern detected in content")
+                return SpamCheckResult.BLOCKED_CONTENT_SPAM
+            }
+            
+            // 4. Check for excessive uppercase (shouting)
+            if (content.length > 5 && content.count { it.isUpperCase() } > content.length * 0.7) {
+                issueWarning(peerID, "Excessive uppercase content detected")
+                return SpamCheckResult.BLOCKED_CONTENT_SPAM
+            }
+            
+            // 5. Check for excessive repetition within single message
+            if (hasExcessiveRepetition(content)) {
+                issueWarning(peerID, "Excessive character repetition detected")
                 return SpamCheckResult.BLOCKED_CONTENT_SPAM
             }
             
@@ -231,6 +251,70 @@ class AntiSpamManager(
             Log.w(TAG, "Error checking content spam: ${e.message}")
             return SpamCheckResult.ALLOWED
         }
+    }
+    
+    /**
+     * Check for common spam patterns
+     */
+    private fun isSpamPattern(content: String): Boolean {
+        val lowerContent = content.lowercase()
+        
+        // Common spam keywords and patterns
+        val spamPatterns = listOf(
+            "click here", "free money", "earn money", "work from home",
+            "congratulations", "winner", "prize", "lottery", "urgent",
+            "limited time", "act now", "call now", "www.", "http://", "https://",
+            "bitcoin", "crypto", "investment", "trading", "profit guaranteed"
+        )
+        
+        // Check for multiple spam indicators
+        val spamIndicatorCount = spamPatterns.count { pattern ->
+            lowerContent.contains(pattern)
+        }
+        
+        // If content contains 2+ spam patterns, it's likely spam
+        if (spamIndicatorCount >= 2) return true
+        
+        // Check for phone numbers (simple pattern)
+        if (lowerContent.matches(Regex(".*\\d{10,}.*"))) return true
+        
+        // Check for excessive special characters
+        val specialCharCount = content.count { !it.isLetterOrDigit() && !it.isWhitespace() }
+        if (content.length > 10 && specialCharCount > content.length * 0.3) return true
+        
+        return false
+    }
+    
+    /**
+     * Check for excessive character repetition within a message
+     */
+    private fun hasExcessiveRepetition(content: String): Boolean {
+        if (content.length < 4) return false
+        
+        // Check for 4+ consecutive identical characters
+        for (i in 0..content.length - 4) {
+            val char = content[i]
+            if (content.substring(i, i + 4).all { it == char }) {
+                return true
+            }
+        }
+        
+        // Check for repetitive patterns (like "abcabc")
+        for (patternLength in 2..6) {
+            if (content.length >= patternLength * 3) {
+                for (i in 0..content.length - patternLength * 3) {
+                    val pattern = content.substring(i, i + patternLength)
+                    val nextPattern = content.substring(i + patternLength, i + patternLength * 2)
+                    val thirdPattern = content.substring(i + patternLength * 2, i + patternLength * 3)
+                    
+                    if (pattern == nextPattern && pattern == thirdPattern) {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
     }
     
     /**

@@ -225,6 +225,7 @@ class NoiseChannelEncryption {
     fun processChannelKeyPacket(data: ByteArray): Pair<String, String>? {
         return try {
             val json = String(data, Charsets.UTF_8)
+            @Suppress("UNCHECKED_CAST")
             val packet = com.google.gson.Gson().fromJson(json, Map::class.java) as Map<String, Any>
             
             val channel = packet["channel"] as? String

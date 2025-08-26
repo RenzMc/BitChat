@@ -400,6 +400,7 @@ class LocationChannelManager private constructor(private val context: Context) {
         try {
             val channelData = dataManager?.loadLastGeohashChannel()
             if (channelData != null) {
+                @Suppress("UNCHECKED_CAST")
                 val channelMap = gson.fromJson(channelData, Map::class.java) as? Map<String, Any>
                 if (channelMap != null) {
                     val channel = when (channelMap["type"] as? String) {

@@ -74,6 +74,7 @@ class DataManager(private val context: Context) {
         // Load channel creators
         val creatorsJson = prefs.getString("channel_creators", "{}")
         try {
+            @Suppress("UNCHECKED_CAST")
             val creatorsMap = gson.fromJson(creatorsJson, Map::class.java) as? Map<String, String>
             creatorsMap?.let { _channelCreators.putAll(it) }
         } catch (e: Exception) {

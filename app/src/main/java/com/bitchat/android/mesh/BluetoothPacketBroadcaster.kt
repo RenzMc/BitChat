@@ -56,7 +56,7 @@ class BluetoothPacketBroadcaster(
     private val broadcasterScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
     // SERIALIZATION: Actor to serialize all broadcast operations
-    @OptIn(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
+    @OptIn(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.DelicateCoroutinesApi::class)
     private val broadcasterActor = broadcasterScope.actor<BroadcastRequest>(
         capacity = Channel.UNLIMITED
     ) {

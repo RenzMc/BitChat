@@ -32,7 +32,7 @@ fun ChatUserSheet(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboard.current
     
     // Bottom sheet state
     val sheetState = rememberModalBottomSheetState(

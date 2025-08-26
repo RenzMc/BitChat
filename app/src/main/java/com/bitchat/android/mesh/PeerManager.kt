@@ -125,8 +125,10 @@ class PeerManager {
         
         peers[peerID] = peerInfo
         
-        // Update legacy structures for compatibility
+        // Update legacy structures for compatibility (suppressing deprecation warnings during transition)
+        @Suppress("DEPRECATION")
         peerNicknames[peerID] = nickname
+        @Suppress("DEPRECATION")
         activePeers[peerID] = now
         
         if (isNewPeer && isVerified) {
@@ -171,6 +173,7 @@ class PeerManager {
      */
     fun updatePeerLastSeen(peerID: String) {
         if (peerID != "unknown") {
+            @Suppress("DEPRECATION")
             activePeers[peerID] = System.currentTimeMillis()
             // Also update PeerInfo if it exists
             peers[peerID]?.let { info ->
@@ -187,8 +190,10 @@ class PeerManager {
         
         // Clean up stale peer IDs with the same nickname (exact same logic as iOS)
         val stalePeerIDs = mutableListOf<String>()
+        @Suppress("DEPRECATION")
         peerNicknames.forEach { (existingPeerID, existingNickname) ->
             if (existingNickname == nickname && existingPeerID != peerID) {
+                @Suppress("DEPRECATION")
                 val lastSeen = activePeers[existingPeerID] ?: 0
                 val wasRecentlySeen = (System.currentTimeMillis() - lastSeen) < 10000
                 if (!wasRecentlySeen) {
@@ -206,7 +211,9 @@ class PeerManager {
         val isFirstAnnounce = !announcedPeers.contains(peerID)
         
         // Update peer data
+        @Suppress("DEPRECATION")
         peerNicknames[peerID] = nickname
+        @Suppress("DEPRECATION")
         activePeers[peerID] = System.currentTimeMillis()
         
         // Handle first announcement
@@ -223,7 +230,9 @@ class PeerManager {
      * Remove peer
      */
     fun removePeer(peerID: String, notifyDelegate: Boolean = true) {
+        @Suppress("DEPRECATION")
         val nickname = peerNicknames.remove(peerID)
+        @Suppress("DEPRECATION")
         activePeers.remove(peerID)
         peerRSSI.remove(peerID)
         announcedPeers.remove(peerID)
