@@ -129,14 +129,11 @@ class AntiSpamManager(
             return rateResult
         }
         
-        // For message packets, check content-based spam detection
-        if (packet.type == com.bitchat.android.protocol.MessageType.MESSAGE.value || 
-            packet.type == com.bitchat.android.protocol.MessageType.NOISE_ENCRYPTED.value) {
-            
-            val contentResult = checkContentSpam(packet, peerID)
-            if (contentResult != SpamCheckResult.ALLOWED) {
-                return contentResult
-            }
+        // Apply anti-spam to ALL packet types (not just messages)
+        // This covers channels, private messages, announcements, receipts, etc.
+        val contentResult = checkContentSpam(packet, peerID)
+        if (contentResult != SpamCheckResult.ALLOWED) {
+            return contentResult
         }
         
         // Update activity tracking for warning decay
@@ -193,11 +190,18 @@ class AntiSpamManager(
     
     /**
      * Analyze message content for spam patterns
+     * Now applies to ALL packet types for comprehensive protection
      */
     private fun checkContentSpam(packet: BitchatPacket, peerID: String): SpamCheckResult {
         try {
             val content = String(packet.payload, Charsets.UTF_8).trim()
             if (content.isEmpty()) return SpamCheckResult.ALLOWED
+            
+            // Skip content analysis for certain system packet types
+            if (packet.type == com.bitchat.android.protocol.MessageType.ANNOUNCE.value ||
+                packet.type == com.bitchat.android.protocol.MessageType.LEAVE.value) {
+                return SpamCheckResult.ALLOWED
+            }
             
             val contentHistory = peerContentHistory.getOrPut(peerID) { mutableListOf() }
             
@@ -286,7 +290,7 @@ class AntiSpamManager(
             .putLong("${KEY_PEER_WARNING_TIMESTAMPS}_$peerID", currentTime)
             .apply()
         
-        Log.w(TAG, "Warning issued to ${peerID.take(8)}... (${warnings}/$MAX_WARNINGS): $reason")
+        Log.w(TAG, "⚠️ Spam warning issued to ${peerID.take(8)}... (${warnings}/$MAX_WARNINGS): $reason")
         
         // Notify delegate
         delegate?.onSpamWarningIssued(peerID, warnings, reason)
@@ -320,6 +324,35 @@ class AntiSpamManager(
         
         // Notify delegate
         delegate?.onPeerMuted(peerID, muteUntil, reason)
+    }
+    
+    /**
+     * Check if current user can send messages (not muted by their own spam)
+     */
+    fun canSendMessage(): Boolean {
+        val myPeerID = delegate?.getMyPeerID() ?: return true
+        return !isPeerMuted(myPeerID)
+    }
+    
+    /**
+     * Get mute status message for current user
+     */
+    fun getMuteStatusMessage(): String? {
+        val myPeerID = delegate?.getMyPeerID() ?: return null
+        if (!isPeerMuted(myPeerID)) return null
+        
+        val muteData = prefs.getString("${KEY_MUTED_PEERS}_$myPeerID", null) ?: return null
+        try {
+            val parts = muteData.split(":")
+            if (parts.size < 2) return null
+            
+            val muteUntil = parts[0].toLong()
+            val remaining = muteUntil - System.currentTimeMillis()
+            val minutes = (remaining / 60000).toInt()
+            return "🔇 You are muted for ${minutes} more minutes due to spam"
+        } catch (e: Exception) {
+            return null
+        }
     }
     
     /**
@@ -405,7 +438,19 @@ class AntiSpamManager(
         try {
             val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            val macAddress = wifiManager?.connectionInfo?.macAddress ?: "unknown"
+            // Use alternative method for MAC address since connectionInfo.macAddress is deprecated
+            val macAddress = try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    // Use network interfaces for newer Android versions
+                    val networkInterfaces = java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())
+                    networkInterfaces.find { it.name == "wlan0" }?.hardwareAddress?.joinToString(":") { "%02x".format(it) } ?: "unknown"
+                } else {
+                    @Suppress("DEPRECATION")
+                    wifiManager?.connectionInfo?.macAddress ?: "unknown"
+                }
+            } catch (e: Exception) {
+                "unknown"
+            }
             
             // Combine multiple device identifiers
             val combined = "$androidId:$macAddress:${System.getProperty("os.version")}"

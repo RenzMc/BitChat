@@ -204,9 +204,14 @@ class BluetoothPacketBroadcaster(
     ): Boolean {
         return try {
             characteristic?.let { char ->
-                char.value = data
-                val result = gattServer?.notifyCharacteristicChanged(device, char, false) ?: false
-                result
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    gattServer?.notifyCharacteristicChanged(device, char, false, data) ?: false
+                } else {
+                    @Suppress("DEPRECATION")
+                    char.value = data
+                    @Suppress("DEPRECATION") 
+                    gattServer?.notifyCharacteristicChanged(device, char, false) ?: false
+                }
             } ?: false
         } catch (e: Exception) {
             Log.w(TAG, "Error sending to server connection ${device.address}: ${e.message}")
@@ -228,9 +233,14 @@ class BluetoothPacketBroadcaster(
     ): Boolean {
         return try {
             deviceConn.characteristic?.let { char ->
-                char.value = data
-                val result = deviceConn.gatt?.writeCharacteristic(char) ?: false
-                result
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    deviceConn.gatt?.writeCharacteristic(char, data, android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ?: false
+                } else {
+                    @Suppress("DEPRECATION")
+                    char.value = data
+                    @Suppress("DEPRECATION")
+                    deviceConn.gatt?.writeCharacteristic(char) ?: false
+                }
             } ?: false
         } catch (e: Exception) {
             Log.w(TAG, "Error sending to client connection ${deviceConn.device.address}: ${e.message}")

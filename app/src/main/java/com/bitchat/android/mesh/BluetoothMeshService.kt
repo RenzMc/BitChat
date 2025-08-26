@@ -377,12 +377,23 @@ class BluetoothMeshService(private val context: Context) {
             override fun onPeerMuted(peerID: String, muteUntil: Long, reason: String) {
                 // Create system mute notification message
                 val peerNickname = peerManager.getPeerNickname(peerID) ?: "Unknown peer"
-                val muteMessage = BitchatMessage(
-                    sender = "system",
-                    content = "🔇 $peerNickname has been muted for 1 hour due to spam: $reason",
-                    timestamp = java.util.Date(),
-                    isRelay = false
-                )
+                val muteMessage = if (peerID == myPeerID) {
+                    // User muted themselves due to spam
+                    BitchatMessage(
+                        sender = "system",
+                        content = "🔇 You have been muted for 1 hour due to spam: $reason",
+                        timestamp = java.util.Date(),
+                        isRelay = false
+                    )
+                } else {
+                    // Another peer was muted
+                    BitchatMessage(
+                        sender = "system",
+                        content = "🔇 $peerNickname has been muted for 1 hour due to spam: $reason",
+                        timestamp = java.util.Date(),
+                        isRelay = false
+                    )
+                }
                 delegate?.didReceiveMessage(muteMessage)
                 Log.w(TAG, "Peer muted due to spam: $peerID until ${java.util.Date(muteUntil)}")
             }
@@ -497,6 +508,21 @@ class BluetoothMeshService(private val context: Context) {
     fun sendMessage(content: String, mentions: List<String> = emptyList(), channel: String? = null) {
         if (content.isEmpty()) return
         
+        // Check if user is muted before sending
+        if (!packetProcessor.canSendMessage()) {
+            val muteMessage = packetProcessor.getMuteStatusMessage()
+            if (muteMessage != null) {
+                val systemMessage = BitchatMessage(
+                    sender = "system",
+                    content = muteMessage,
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                delegate?.didReceiveMessage(systemMessage)
+            }
+            return
+        }
+        
         serviceScope.launch {
             val packet = BitchatPacket(
                 version = 1u,
@@ -520,6 +546,21 @@ class BluetoothMeshService(private val context: Context) {
     fun sendPrivateMessage(content: String, recipientPeerID: String, recipientNickname: String, messageID: String? = null) {
         if (content.isEmpty() || recipientPeerID.isEmpty()) return
         if (!recipientPeerID.startsWith("nostr_") && recipientNickname.isEmpty()) return
+        
+        // Check if user is muted before sending
+        if (!packetProcessor.canSendMessage()) {
+            val muteMessage = packetProcessor.getMuteStatusMessage()
+            if (muteMessage != null) {
+                val systemMessage = BitchatMessage(
+                    sender = "system",
+                    content = muteMessage,
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                delegate?.didReceiveMessage(systemMessage)
+            }
+            return
+        }
         
         serviceScope.launch {
             val finalMessageID = messageID ?: java.util.UUID.randomUUID().toString()
@@ -600,6 +641,9 @@ class BluetoothMeshService(private val context: Context) {
      * Uses same encryption approach as iOS SimplifiedBluetoothService
      */
     fun sendReadReceipt(messageID: String, recipientPeerID: String, readerNickname: String) {
+        // Check if user is muted before sending read receipts  
+        if (!packetProcessor.canSendMessage()) return
+        
         serviceScope.launch {
             Log.d(TAG, "📖 Sending read receipt for message $messageID to $recipientPeerID")
             
@@ -650,6 +694,9 @@ class BluetoothMeshService(private val context: Context) {
      * Send broadcast announce with TLV-encoded identity announcement - exactly like iOS
      */
     fun sendBroadcastAnnounce() {
+        // Check if user is muted before sending announcements
+        if (!packetProcessor.canSendMessage()) return
+        
         Log.d(TAG, "Sending broadcast announce")
         serviceScope.launch {
             val nickname = delegate?.getNickname() ?: myPeerID
@@ -698,6 +745,9 @@ class BluetoothMeshService(private val context: Context) {
      */
     fun sendAnnouncementToPeer(peerID: String) {
         if (peerManager.hasAnnouncedToPeer(peerID)) return
+        
+        // Check if user is muted before sending announcements
+        if (!packetProcessor.canSendMessage()) return
         
         val nickname = delegate?.getNickname() ?: myPeerID
         

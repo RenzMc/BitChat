@@ -319,6 +319,20 @@ class PacketProcessor(
     }
     
     /**
+     * Check if current user can send messages (not muted)
+     */
+    fun canSendMessage(): Boolean {
+        return antiSpamManager.canSendMessage()
+    }
+    
+    /**
+     * Get mute status message for current user
+     */
+    fun getMuteStatusMessage(): String? {
+        return antiSpamManager.getMuteStatusMessage()
+    }
+    
+    /**
      * Shutdown the processor and all peer actors
      */
     fun shutdown() {
