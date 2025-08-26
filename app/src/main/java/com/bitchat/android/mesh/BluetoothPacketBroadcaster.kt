@@ -205,7 +205,8 @@ class BluetoothPacketBroadcaster(
         return try {
             characteristic?.let { char ->
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    gattServer?.notifyCharacteristicChanged(device, char, false, data) ?: false
+                    val result = gattServer?.notifyCharacteristicChanged(device, char, false, data)
+                    result == android.bluetooth.BluetoothStatusCodes.SUCCESS
                 } else {
                     @Suppress("DEPRECATION")
                     char.value = data
@@ -234,7 +235,8 @@ class BluetoothPacketBroadcaster(
         return try {
             deviceConn.characteristic?.let { char ->
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    deviceConn.gatt?.writeCharacteristic(char, data, android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ?: false
+                    val result = deviceConn.gatt?.writeCharacteristic(char, data, android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+                    result == android.bluetooth.BluetoothStatusCodes.SUCCESS
                 } else {
                     @Suppress("DEPRECATION")
                     char.value = data
