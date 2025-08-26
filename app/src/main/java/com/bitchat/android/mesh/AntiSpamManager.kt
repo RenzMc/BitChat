@@ -70,6 +70,11 @@ class AntiSpamManager(
         private const val KEY_DEVICE_WARNING_TIMESTAMPS = "device_warning_timestamps_v2"
         private const val KEY_BLOCKED_IPS = "blocked_ips_v2"
         
+        // Legacy peer-based keys for backward compatibility
+        private const val KEY_PEER_WARNINGS = "peer_warnings_v2"
+        private const val KEY_PEER_WARNING_TIMESTAMPS = "peer_warning_timestamps_v2"
+        private const val KEY_MUTED_PEERS = "muted_peers_v2"
+        
         // QUANTUM CLEANUP: Optimized intervals for zero overhead
         private const val CLEANUP_INTERVAL_MS = 900_000L // 15 minutes (reduced frequency for performance)
     }
@@ -83,6 +88,11 @@ class AntiSpamManager(
     private val deviceLastNormalActivity = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val ipMessageCounts = java.util.concurrent.ConcurrentHashMap<String, MutableList<Long>>()
     private val processedSpamHashes = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    
+    // Legacy peer-based tracking for backward compatibility
+    private val peerMessageCounts = java.util.concurrent.ConcurrentHashMap<String, MutableList<Long>>()
+    private val peerContentHistory = java.util.concurrent.ConcurrentHashMap<String, MutableList<String>>()
+    private val peerLastNormalActivity = java.util.concurrent.ConcurrentHashMap<String, Long>()
     
     // Device fingerprinting for anti-bypass
     private val deviceFingerprint: String by lazy { generateDeviceFingerprint() }
@@ -819,8 +829,7 @@ class AntiSpamManager(
         }
         
         if (existingFingerprint == null) {
-            // FIRST TIME: Initialize quantum-level persistence
-            Log.d(TAG, "QUANTUM: First-time device fingerprint initialization")
+            // First-time initialization
             val editor = prefs.edit()
             storageKeys.forEach { key ->
                 editor.putString(key, deviceFingerprint)
@@ -831,11 +840,7 @@ class AntiSpamManager(
         } else {
             // QUANTUM VERIFICATION: Check for bypass attempts
             if (existingFingerprint != deviceFingerprint) {
-                Log.w(TAG, "QUANTUM: Potential bypass attempt detected and BLOCKED")
-                Log.w(TAG, "QUANTUM: Stored [${existingFingerprint.take(12)}...] vs Generated [${deviceFingerprint.take(12)}...]")
-                
-                // QUANTUM DEFENSE: Use stored fingerprint to maintain unbreakable protection
-                Log.d(TAG, "QUANTUM: Maintaining stored fingerprint for maximum anti-bypass")
+                // Bypass attempt blocked - using stored fingerprint
             }
             
             // QUANTUM REFRESH: Update all storage layers with existing fingerprint
@@ -869,13 +874,18 @@ class AntiSpamManager(
         val currentTime = System.currentTimeMillis()
         var cleaned = 0
         
-        // SMART CLEANUP: Only clean if memory usage is getting high
+        // Efficient cleanup: Only when needed
         val totalEntries = deviceMessageCounts.size + deviceContentHistory.size + ipMessageCounts.size
-        if (totalEntries < 50) {
-            return // Skip cleanup if memory usage is low
+        if (totalEntries < 30) return
+        
+        // Clean device rate limiting data
+        deviceMessageCounts.values.forEach { history ->
+            val originalSize = history.size
+            history.removeAll { it < currentTime - RATE_LIMIT_WINDOW_MS }
+            cleaned += originalSize - history.size
         }
         
-        // Clean rate limiting data
+        // Clean legacy peer rate limiting data
         peerMessageCounts.values.forEach { history ->
             val originalSize = history.size
             history.removeAll { it < currentTime - RATE_LIMIT_WINDOW_MS }
@@ -889,19 +899,25 @@ class AntiSpamManager(
             cleaned += originalSize - history.size
         }
         
-        // Clean expired mutes
-        val allKeys = prefs.all.keys.filter { it.startsWith(KEY_MUTED_PEERS) }
-        allKeys.forEach { key ->
-            val peerID = key.removePrefix("${KEY_MUTED_PEERS}_")
-            if (!isPeerMuted(peerID)) {
-                // This will have been cleaned by isPeerMuted check
+        // Clean expired mutes (both device and peer based)
+        val deviceMuteKeys = prefs.all.keys.filter { it.startsWith(KEY_MUTED_DEVICES) }
+        deviceMuteKeys.forEach { key ->
+            val device = key.removePrefix("${KEY_MUTED_DEVICES}_")
+            if (!isDeviceMuted()) {
+                prefs.edit().remove(key).apply()
                 cleaned++
             }
         }
         
-        if (cleaned > 0) {
-            Log.d(TAG, "Cleanup completed: removed $cleaned old entries")
+        val peerMuteKeys = prefs.all.keys.filter { it.startsWith(KEY_MUTED_PEERS) }
+        peerMuteKeys.forEach { key ->
+            val peerID = key.removePrefix("${KEY_MUTED_PEERS}_")
+            if (!isPeerMuted(peerID)) {
+                cleaned++
+            }
         }
+        
+        // Cleanup completed
     }
     
     /**
@@ -911,12 +927,19 @@ class AntiSpamManager(
         return buildString {
             appendLine("=== Anti-Spam Manager Debug Info ===")
             appendLine("Device Fingerprint: ${deviceFingerprint.take(16)}...")
+            appendLine("Tracked Devices: ${deviceMessageCounts.size}")
             appendLine("Tracked Peers: ${peerMessageCounts.size}")
             appendLine("Tracked IPs: ${ipMessageCounts.size}")
-            appendLine("Active Mutes: ${prefs.all.keys.count { it.startsWith(KEY_MUTED_PEERS) }}")
+            appendLine("Active Device Mutes: ${prefs.all.keys.count { it.startsWith(KEY_MUTED_DEVICES) }}")
+            appendLine("Active Peer Mutes: ${prefs.all.keys.count { it.startsWith(KEY_MUTED_PEERS) }}")
             appendLine("Active Warnings: ${prefs.all.keys.count { it.startsWith(KEY_PEER_WARNINGS) }}")
             
-            appendLine("\nRate Limit Status:")
+            appendLine("\nDevice Rate Limit Status:")
+            deviceMessageCounts.forEach { (deviceId, history) ->
+                appendLine("  ${deviceId.take(8)}...: ${history.size} messages in last minute")
+            }
+            
+            appendLine("\nPeer Rate Limit Status:")
             peerMessageCounts.forEach { (peerID, history) ->
                 appendLine("  ${peerID.take(8)}...: ${history.size} messages in last minute")
             }
@@ -944,6 +967,9 @@ class AntiSpamManager(
      */
     fun shutdown() {
         managerScope.cancel()
+        deviceMessageCounts.clear()
+        deviceContentHistory.clear()
+        deviceLastNormalActivity.clear()
         peerMessageCounts.clear()
         peerContentHistory.clear()
         peerLastNormalActivity.clear()
