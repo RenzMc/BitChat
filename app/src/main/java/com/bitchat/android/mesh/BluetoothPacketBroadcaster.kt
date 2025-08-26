@@ -4,8 +4,6 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattServer
-import android.bluetooth.BluetoothStatusCodes
-import android.os.Build
 import android.util.Log
 import com.bitchat.android.protocol.SpecialRecipients
 import com.bitchat.android.model.RoutedPacket
@@ -206,15 +204,8 @@ class BluetoothPacketBroadcaster(
     ): Boolean {
         return try {
             characteristic?.let { char ->
-                // Use modern setValue for API 33+
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    gattServer?.notifyCharacteristicChanged(device, char, false, data)
-                } else {
-                    @Suppress("DEPRECATION")
-                    char.value = data
-                    gattServer?.notifyCharacteristicChanged(device, char, false)
-                }
-                val result = true
+                char.value = data
+                val result = gattServer?.notifyCharacteristicChanged(device, char, false) ?: false
                 result
             } ?: false
         } catch (e: Exception) {
@@ -237,14 +228,8 @@ class BluetoothPacketBroadcaster(
     ): Boolean {
         return try {
             deviceConn.characteristic?.let { char ->
-                // Use modern writeCharacteristic for API 33+
-                val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    deviceConn.gatt?.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS
-                } else {
-                    @Suppress("DEPRECATION")
-                    char.value = data
-                    deviceConn.gatt?.writeCharacteristic(char) ?: false
-                }
+                char.value = data
+                val result = deviceConn.gatt?.writeCharacteristic(char) ?: false
                 result
             } ?: false
         } catch (e: Exception) {

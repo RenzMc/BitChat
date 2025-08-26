@@ -51,11 +51,6 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val showMentionSuggestions by viewModel.showMentionSuggestions.observeAsState(false)
     val mentionSuggestions by viewModel.mentionSuggestions.observeAsState(emptyList())
     val showAppInfo by viewModel.showAppInfo.observeAsState(false)
-    
-    // View Once state
-    val isViewOnceEnabled by viewModel.isViewOnceEnabled.observeAsState(false)
-    val showViewOncePopup by viewModel.showViewOncePopup.observeAsState(false)
-    val viewOnceMessage by viewModel.viewOnceMessage.observeAsState()
 
     var messageText by remember { mutableStateOf(TextFieldValue("")) }
     var showPasswordPrompt by remember { mutableStateOf(false) }
@@ -148,11 +143,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     selectedUserForSheet = baseName
                     selectedMessageForSheet = message
                     showUserSheet = true
-                },
-                onViewOnceMessage = { message ->
-                    viewModel.viewOnceMessage(message)
-                },
-                viewedOnceMessages = viewModel.viewedOnceMessages.observeAsState(emptySet()).value
+                }
             )
             // Input area - stays at bottom
             ChatInputSection(
@@ -190,9 +181,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 selectedPrivatePeer = selectedPrivatePeer,
                 currentChannel = currentChannel,
                 nickname = nickname,
-                colorScheme = colorScheme,
-                isViewOnceEnabled = isViewOnceEnabled,
-                onViewOnceToggle = { viewModel.toggleViewOnce() }
+                colorScheme = colorScheme
             )
         }
 
@@ -318,9 +307,6 @@ fun ChatScreen(viewModel: ChatViewModel) {
         },
         selectedUserForSheet = selectedUserForSheet,
         selectedMessageForSheet = selectedMessageForSheet,
-        showViewOncePopup = showViewOncePopup,
-        viewOnceMessage = viewOnceMessage,
-        onViewOncePopupDismiss = { viewModel.dismissViewOncePopup() },
         viewModel = viewModel
     )
 }
@@ -339,9 +325,7 @@ private fun ChatInputSection(
     selectedPrivatePeer: String?,
     currentChannel: String?,
     nickname: String,
-    colorScheme: ColorScheme,
-    isViewOnceEnabled: Boolean = false,
-    onViewOnceToggle: () -> Unit = {}
+    colorScheme: ColorScheme
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -378,9 +362,7 @@ private fun ChatInputSection(
                 selectedPrivatePeer = selectedPrivatePeer,
                 currentChannel = currentChannel,
                 nickname = nickname,
-                modifier = Modifier.fillMaxWidth(),
-                isViewOnceEnabled = isViewOnceEnabled,
-                onViewOnceToggle = onViewOnceToggle
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -450,9 +432,6 @@ private fun ChatDialogs(
     onUserSheetDismiss: () -> Unit,
     selectedUserForSheet: String,
     selectedMessageForSheet: BitchatMessage?,
-    showViewOncePopup: Boolean,
-    viewOnceMessage: BitchatMessage?,
-    onViewOncePopupDismiss: () -> Unit,
     viewModel: ChatViewModel
 ) {
     // Password dialog
@@ -488,14 +467,6 @@ private fun ChatDialogs(
             targetNickname = selectedUserForSheet,
             selectedMessage = selectedMessageForSheet,
             viewModel = viewModel
-        )
-    }
-    
-    // View Once popup
-    if (showViewOncePopup) {
-        ViewOncePopup(
-            message = viewOnceMessage,
-            onDismiss = onViewOncePopupDismiss
         )
     }
 }

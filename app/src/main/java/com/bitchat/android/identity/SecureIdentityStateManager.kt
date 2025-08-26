@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import android.os.Build
 import java.security.MessageDigest
 import java.security.SecureRandom
 import android.util.Log
@@ -39,20 +38,12 @@ class SecureIdentityStateManager(private val context: Context) {
     private val random = SecureRandom()
     
     init {
-        // Create master key for encryption (using modern API)
-        val masterKey = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-        } else {
-            // Fallback for older devices
-            MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-        }
+        // Create master key for encryption
+        val masterKey = MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
         
-        // Create encrypted shared preferences (suppressing deprecation for compatibility)
-        @Suppress("DEPRECATION")
+        // Create encrypted shared preferences
         prefs = EncryptedSharedPreferences.create(
             context,
             PREFS_NAME,

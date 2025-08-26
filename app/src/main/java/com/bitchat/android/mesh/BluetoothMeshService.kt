@@ -47,7 +47,7 @@ class BluetoothMeshService(private val context: Context) {
     private val storeForwardManager = StoreForwardManager()
     private val messageHandler = MessageHandler(myPeerID)
     internal val connectionManager = BluetoothConnectionManager(context, myPeerID, fragmentManager) // Made internal for access
-    private val packetProcessor = PacketProcessor(myPeerID)
+    private val packetProcessor = PacketProcessor(myPeerID, context)
     
     // Service state management
     private var isActive = false
@@ -358,6 +358,59 @@ class BluetoothMeshService(private val context: Context) {
             
             override fun relayPacket(routed: RoutedPacket) {
                 connectionManager.broadcastPacket(routed)
+            }
+            
+            // Anti-spam callbacks - send warning notifications to users
+            override fun onSpamWarningIssued(peerID: String, warningCount: Int, reason: String) {
+                // Create system warning message for user notification
+                val peerNickname = peerManager.getPeerNickname(peerID) ?: "Unknown peer"
+                val warningMessage = BitchatMessage(
+                    sender = "system",
+                    content = "⚠️ Spam warning issued to $peerNickname ($warningCount/3): $reason",
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                delegate?.didReceiveMessage(warningMessage)
+                Log.w(TAG, "Anti-spam warning issued to $peerID ($warningCount/3): $reason")
+            }
+            
+            override fun onPeerMuted(peerID: String, muteUntil: Long, reason: String) {
+                // Create system mute notification message
+                val peerNickname = peerManager.getPeerNickname(peerID) ?: "Unknown peer"
+                val muteMessage = BitchatMessage(
+                    sender = "system",
+                    content = "🔇 $peerNickname has been muted for 1 hour due to spam: $reason",
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                delegate?.didReceiveMessage(muteMessage)
+                Log.w(TAG, "Peer muted due to spam: $peerID until ${java.util.Date(muteUntil)}")
+            }
+            
+            override fun onPeerUnmuted(peerID: String) {
+                // Create system unmute notification message
+                val peerNickname = peerManager.getPeerNickname(peerID) ?: "Unknown peer"
+                val unmuteMessage = BitchatMessage(
+                    sender = "system",
+                    content = "🔊 $peerNickname has been unmuted",
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                delegate?.didReceiveMessage(unmuteMessage)
+                Log.d(TAG, "Peer unmuted: $peerID")
+            }
+            
+            override fun onWarningDecayed(peerID: String, remainingWarnings: Int) {
+                // Create system message for warning decay (good behavior)
+                val peerNickname = peerManager.getPeerNickname(peerID) ?: "Unknown peer"
+                val decayMessage = BitchatMessage(
+                    sender = "system", 
+                    content = "✅ Warning removed for $peerNickname due to good behavior ($remainingWarnings warnings remaining)",
+                    timestamp = java.util.Date(),
+                    isRelay = false
+                )
+                delegate?.didReceiveMessage(decayMessage)
+                Log.d(TAG, "Warning decayed for $peerID: $remainingWarnings warnings remaining")
             }
         }
         
@@ -828,7 +881,23 @@ class BluetoothMeshService(private val context: Context) {
             appendLine(messageHandler.getDebugInfo())
             appendLine()
             appendLine(packetProcessor.getDebugInfo())
+            appendLine()
+            appendLine(packetProcessor.getAntiSpamDebugInfo())
         }
+    }
+    
+    /**
+     * Check if a peer is currently muted by the anti-spam system
+     */
+    fun isPeerMuted(peerID: String): Boolean {
+        return packetProcessor.isPeerMuted(peerID)
+    }
+    
+    /**
+     * Get anti-spam system status for admin purposes
+     */
+    fun getAntiSpamStatus(): String {
+        return packetProcessor.getAntiSpamDebugInfo()
     }
     
     /**

@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.util.*
 import kotlin.random.Random
-import com.bitchat.android.security.AntiSpamManager
 
 /**
  * Refactored ChatViewModel - Main coordinator for bitchat functionality
@@ -38,7 +37,6 @@ class ChatViewModel(
     private val dataManager = DataManager(application.applicationContext)
     private val messageManager = MessageManager(state)
     private val channelManager = ChannelManager(state, messageManager, dataManager, viewModelScope)
-    private val antiSpamManager = AntiSpamManager.getInstance(application.applicationContext)
     
     // Create Noise session delegate for clean dependency injection
     private val noiseSessionDelegate = object : NoiseSessionDelegate {
@@ -108,10 +106,6 @@ class ChatViewModel(
     val geohashPeople: LiveData<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: LiveData<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: LiveData<Map<String, Int>> = state.geohashParticipantCounts
-    val isViewOnceEnabled: LiveData<Boolean> = state.isViewOnceEnabled
-    val showViewOncePopup: LiveData<Boolean> = state.showViewOncePopup
-    val viewOnceMessage: LiveData<BitchatMessage?> = state.viewOnceMessage
-    val viewedOnceMessages: LiveData<Set<String>> = state.viewedOnceMessages
     
     init {
         // Note: Mesh service delegate is now set by MainActivity
@@ -158,9 +152,12 @@ class ChatViewModel(
         
         // Initialize Nostr integration
         nostrGeohashService.initializeNostrIntegration()
-        
-        // Initialize anti-spam protection for incoming messages
-        meshDelegateHandler.initializeAntiSpam(getApplication<Application>().applicationContext)
+
+        // Ensure NostrTransport knows our mesh peer ID for embedded packets
+        try {
+            val nostrTransport = com.bitchat.android.nostr.NostrTransport.getInstance(getApplication())
+            nostrTransport.senderPeerID = meshService.myPeerID
+        } catch (_: Exception) { }
         
         // Note: Mesh service is now started by MainActivity
         
@@ -216,6 +213,17 @@ class ChatViewModel(
             setCurrentPrivateChatPeer(peerID)
             // Clear notifications for this sender since user is now viewing the chat
             clearNotificationsForSender(peerID)
+
+            // Persistently mark all messages in this conversation as read so Nostr fetches
+            // after app restarts won't re-mark them as unread.
+            try {
+                val seen = com.bitchat.android.services.SeenMessageStore.getInstance(getApplication())
+                val chats = state.getPrivateChatsValue()
+                val messages = chats[peerID] ?: emptyList()
+                messages.forEach { msg ->
+                    try { seen.markRead(msg.id) } catch (_: Exception) { }
+                }
+            } catch (_: Exception) { }
         }
     }
     
@@ -232,86 +240,54 @@ class ChatViewModel(
     fun sendMessage(content: String) {
         if (content.isEmpty()) return
         
-        // Check anti-spam before processing message
-        viewModelScope.launch {
-            val antiSpamResult = antiSpamManager.checkMessage(meshService.myPeerID, content)
-            
-            if (!antiSpamResult.allowed) {
-                // Show mute message
-                val muteMessage = BitchatMessage(
-                    sender = "system",
-                    content = antiSpamResult.warning ?: "Message blocked due to spam",
-                    timestamp = Date(),
-                    isRelay = false
-                )
-                messageManager.addMessage(muteMessage)
-                return@launch
-            }
-            
-            // Show warning if applicable
-            antiSpamResult.warning?.let { warning ->
-                val warningMessage = BitchatMessage(
-                    sender = "system",
-                    content = warning,
-                    timestamp = Date(),
-                    isRelay = false
-                )
-                messageManager.addMessage(warningMessage)
-            }
-            
-            // Proceed with normal message processing
-            processSendMessage(content)
-        }
-    }
-    
-    private fun processSendMessage(content: String) {
         // Check for commands
         if (content.startsWith("/")) {
-                commandProcessor.processCommand(content, meshService, meshService.myPeerID, { messageContent, mentions, channel ->
-                    meshService.sendMessage(messageContent, mentions, channel)
-                }, this)
-                return
-            }
+            commandProcessor.processCommand(content, meshService, meshService.myPeerID, { messageContent, mentions, channel ->
+                meshService.sendMessage(messageContent, mentions, channel)
+            }, this)
+            return
+        }
         
         val mentions = messageManager.parseMentions(content, meshService.getPeerNicknames().values.toSet(), state.getNicknameValue())
         // REMOVED: Auto-join mentioned channels feature that was incorrectly parsing hashtags from @mentions
         // This was causing messages like "test @jack#1234 test" to auto-join channel "#1234"
         
-        val selectedPeer = state.getSelectedPrivateChatPeerValue()
+        var selectedPeer = state.getSelectedPrivateChatPeerValue()
         val currentChannelValue = state.getCurrentChannelValue()
         
         if (selectedPeer != null) {
+            // If the selected peer is a temporary Nostr alias or a noise-hex identity, resolve to a canonical target
+            selectedPeer = com.bitchat.android.services.ConversationAliasResolver.resolveCanonicalPeerID(
+                selectedPeerID = selectedPeer,
+                connectedPeers = state.getConnectedPeersValue(),
+                meshNoiseKeyForPeer = { pid -> meshService.getPeerInfo(pid)?.noisePublicKey },
+                meshHasPeer = { pid -> meshService.getPeerInfo(pid)?.isConnected == true },
+                nostrPubHexForAlias = { alias -> nostrGeohashService.getNostrKeyMapping()[alias] },
+                findNoiseKeyForNostr = { key -> com.bitchat.android.favorites.FavoritesPersistenceService.shared.findNoiseKey(key) }
+            ).also { canonical ->
+                if (canonical != state.getSelectedPrivateChatPeerValue()) {
+                    privateChatManager.startPrivateChat(canonical, meshService)
+                }
+            }
             // Send private message
             val recipientNickname = meshService.getPeerNicknames()[selectedPeer]
-            // Create private message with View Once support
-            val isViewOnceEnabled = state.getIsViewOnceEnabledValue()
             privateChatManager.sendPrivateMessage(
                 content, 
                 selectedPeer, 
                 recipientNickname,
                 state.getNicknameValue(),
-                meshService.myPeerID,
-                isViewOnce = isViewOnceEnabled
+                meshService.myPeerID
             ) { messageContent, peerID, recipientNicknameParam, messageId ->
-                meshService.sendPrivateMessage(messageContent, peerID, recipientNicknameParam, messageId)
-            }
-            
-            // Reset View Once after sending if enabled
-            if (isViewOnceEnabled) {
-                state.setIsViewOnceEnabled(false)
+                // Route via MessageRouter (mesh when connected+established, else Nostr)
+                val router = com.bitchat.android.services.MessageRouter.getInstance(getApplication(), meshService)
+                router.sendPrivate(messageContent, peerID, recipientNicknameParam, messageId)
             }
         } else {
             // Check if we're in a location channel
             val selectedLocationChannel = state.selectedLocationChannel.value
             if (selectedLocationChannel is com.bitchat.android.geohash.ChannelID.Location) {
-                // Send to geohash channel via Nostr ephemeral event  
-                // NOTE: Geohash messages via Nostr don't support View Once yet - this is a known limitation
+                // Send to geohash channel via Nostr ephemeral event
                 nostrGeohashService.sendGeohashMessage(content, selectedLocationChannel.channel, meshService.myPeerID, state.getNicknameValue())
-                
-                // Reset View Once state for geohash messages too (even though not supported)
-                if (state.getIsViewOnceEnabledValue()) {
-                    state.setIsViewOnceEnabled(false)
-                }
             } else {
                 // Send public/channel message via mesh
                 val message = BitchatMessage(
@@ -321,14 +297,8 @@ class ChatViewModel(
                     isRelay = false,
                     senderPeerID = meshService.myPeerID,
                     mentions = if (mentions.isNotEmpty()) mentions else null,
-                    channel = currentChannelValue,
-                    isViewOnce = state.getIsViewOnceEnabledValue()
+                    channel = currentChannelValue
                 )
-                
-                // Reset View Once after sending if enabled
-                if (state.getIsViewOnceEnabledValue()) {
-                    state.setIsViewOnceEnabled(false)
-                }
                 
                 if (currentChannelValue != null) {
                     channelManager.addChannelMessage(currentChannelValue, message, meshService.myPeerID)
@@ -371,7 +341,44 @@ class ChatViewModel(
     fun toggleFavorite(peerID: String) {
         Log.d("ChatViewModel", "toggleFavorite called for peerID: $peerID")
         privateChatManager.toggleFavorite(peerID)
-        
+
+        // Persist relationship in FavoritesPersistenceService when we have Noise key
+        try {
+            val peerInfo = meshService.getPeerInfo(peerID)
+            val noiseKey = peerInfo?.noisePublicKey
+            val nickname = peerInfo?.nickname ?: (meshService.getPeerNicknames()[peerID] ?: peerID)
+            if (noiseKey != null) {
+                val isNowFavorite = dataManager.favoritePeers.contains(
+                    com.bitchat.android.mesh.PeerFingerprintManager.getInstance().getFingerprintForPeer(peerID) ?: ""
+                )
+                com.bitchat.android.favorites.FavoritesPersistenceService.shared.updateFavoriteStatus(
+                    noisePublicKey = noiseKey,
+                    nickname = nickname,
+                    isFavorite = isNowFavorite
+                )
+
+                // Send favorite notification via mesh or Nostr with our npub if available
+                try {
+                    val myNostr = com.bitchat.android.nostr.NostrIdentityBridge.getCurrentNostrIdentity(getApplication())
+                    val announcementContent = if (isNowFavorite) "[FAVORITED]:${myNostr?.npub ?: ""}" else "[UNFAVORITED]:${myNostr?.npub ?: ""}"
+                    // Prefer mesh if session established, else try Nostr
+                    if (meshService.hasEstablishedSession(peerID)) {
+                        // Reuse existing private message path for notifications
+                        meshService.sendPrivateMessage(
+                            announcementContent,
+                            peerID,
+                            nickname,
+                            java.util.UUID.randomUUID().toString()
+                        )
+                    } else {
+                        val nostrTransport = com.bitchat.android.nostr.NostrTransport.getInstance(getApplication())
+                        nostrTransport.senderPeerID = meshService.myPeerID
+                        nostrTransport.sendFavoriteNotification(peerID, isNowFavorite)
+                    }
+                } catch (_: Exception) { }
+            }
+        } catch (_: Exception) { }
+
         // Log current state after toggle
         logCurrentFavoriteState()
     }
@@ -403,10 +410,20 @@ class ChatViewModel(
         val currentPeers = state.getConnectedPeersValue()
         
         // Update session states
+        val prevStates = state.getPeerSessionStatesValue()
         val sessionStates = currentPeers.associateWith { peerID ->
             meshService.getSessionState(peerID).toString()
         }
         state.setPeerSessionStates(sessionStates)
+        // Detect new established sessions and flush router outbox for them and their noiseHex aliases
+        sessionStates.forEach { (peerID, newState) ->
+            val old = prevStates[peerID]
+            if (old != "established" && newState == "established") {
+                com.bitchat.android.services.MessageRouter
+                    .getInstance(getApplication(), meshService)
+                    .onSessionEstablished(peerID)
+            }
+        }
         // Update fingerprint mappings from centralized manager
         val fingerprints = privateChatManager.getAllPeerFingerprints()
         state.setPeerFingerprints(fingerprints)
@@ -494,7 +511,6 @@ class ChatViewModel(
     fun selectMentionSuggestion(nickname: String, currentText: String): String {
         return commandProcessor.selectMentionSuggestion(nickname, currentText)
     }
-    
     
     // MARK: - BluetoothMeshDelegate Implementation (delegated)
     
@@ -756,36 +772,5 @@ class ChatViewModel(
         return nostrGeohashService.colorForNostrPubkey(pubkeyHex, isDark)
     }
     
-    // MARK: - View Once Functionality
-    
-    /**
-     * Toggle View Once mode for the next message
-     */
-    fun toggleViewOnce() {
-        val currentState = state.getIsViewOnceEnabledValue()
-        state.setIsViewOnceEnabled(!currentState)
-        Log.d(TAG, "View Once toggled to: ${!currentState}")
-    }
-    
-    /**
-     * Open a View Once message for viewing
-     */
-    fun viewOnceMessage(message: BitchatMessage) {
-        if (message.isViewOnce && !state.getViewedOnceMessagesValue().contains(message.id)) {
-            state.setViewOnceMessage(message)
-            state.setShowViewOncePopup(true)
-            state.markMessageAsViewed(message.id)
-            Log.d(TAG, "View Once message opened: ${message.id}")
-        }
-    }
-    
-    /**
-     * Dismiss the View Once popup
-     */
-    fun dismissViewOncePopup() {
-        state.setShowViewOncePopup(false)
-        state.setViewOnceMessage(null)
-        Log.d(TAG, "View Once popup dismissed")
-    }
 
 }

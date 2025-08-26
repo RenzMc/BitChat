@@ -12,7 +12,6 @@ import androidx.core.app.Person
 import androidx.core.app.NotificationManagerCompat
 import com.bitchat.android.MainActivity
 import com.bitchat.android.R
-import com.bitchat.android.geohash.GeohashLocationFilter
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -47,7 +46,6 @@ class NotificationManager(private val context: Context) {
 
     private val notificationManager = NotificationManagerCompat.from(context)
     private val systemNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    private val geohashLocationFilter = GeohashLocationFilter.getInstance(context)
     
     // Track pending notifications per sender to enable grouping
     private val pendingNotifications = ConcurrentHashMap<String, MutableList<PendingNotification>>()
@@ -343,12 +341,6 @@ class NotificationManager(private val context: Context) {
         isMention: Boolean = false,
         isFirstMessage: Boolean = false
     ) {
-        // Check if notification should be filtered based on location
-        if (!geohashLocationFilter.shouldShowGeohashNotification(geohash)) {
-            Log.d(TAG, "Filtering geohash notification for $geohash - too distant from user location")
-            return
-        }
-        
         // Only show notifications if app is in background OR user is not viewing this specific geohash
         val shouldNotify = isAppInBackground || (!isAppInBackground && currentGeohash != geohash)
         

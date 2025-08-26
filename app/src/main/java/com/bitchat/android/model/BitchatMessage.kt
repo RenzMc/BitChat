@@ -59,9 +59,7 @@ data class BitchatMessage(
     val channel: String? = null,
     val encryptedContent: ByteArray? = null,
     val isEncrypted: Boolean = false,
-    val deliveryStatus: DeliveryStatus? = null,
-    val isViewOnce: Boolean = false,
-    val isViewOnceRead: Boolean = false
+    val deliveryStatus: DeliveryStatus? = null
 ) : Parcelable {
 
     /**
@@ -88,14 +86,8 @@ data class BitchatMessage(
             if (mentions != null && mentions.isNotEmpty()) flags = flags or 0x20u
             if (channel != null) flags = flags or 0x40u
             if (isEncrypted) flags = flags or 0x80u
-            
-            // Extended flags for View Once (using next byte)
-            var extendedFlags: UByte = 0u
-            if (isViewOnce) extendedFlags = extendedFlags or 0x01u
-            if (isViewOnceRead) extendedFlags = extendedFlags or 0x02u
 
             buffer.put(flags.toByte())
-            buffer.put(extendedFlags.toByte())
 
             // Timestamp (in milliseconds, 8 bytes big-endian)
             val timestampMillis = timestamp.time
@@ -175,7 +167,7 @@ data class BitchatMessage(
          */
         fun fromBinaryPayload(data: ByteArray): BitchatMessage? {
             try {
-                if (data.size < 14) return null // Updated for extended flags
+                if (data.size < 13) return null
 
                 val buffer = ByteBuffer.wrap(data).apply { order(ByteOrder.BIG_ENDIAN) }
 
@@ -189,11 +181,6 @@ data class BitchatMessage(
                 val hasMentions = (flags and 0x20u) != 0u.toUByte()
                 val hasChannel = (flags and 0x40u) != 0u.toUByte()
                 val isEncrypted = (flags and 0x80u) != 0u.toUByte()
-                
-                // Extended flags
-                val extendedFlags = buffer.get().toUByte()
-                val isViewOnce = (extendedFlags and 0x01u) != 0u.toUByte()
-                val isViewOnceRead = (extendedFlags and 0x02u) != 0u.toUByte()
 
                 // Timestamp
                 val timestampMillis = buffer.getLong()
@@ -300,9 +287,7 @@ data class BitchatMessage(
                     mentions = mentions,
                     channel = channel,
                     encryptedContent = encryptedContent,
-                    isEncrypted = isEncrypted,
-                    isViewOnce = isViewOnce,
-                    isViewOnceRead = isViewOnceRead
+                    isEncrypted = isEncrypted
                 )
 
             } catch (e: Exception) {
@@ -334,8 +319,6 @@ data class BitchatMessage(
         } else if (other.encryptedContent != null) return false
         if (isEncrypted != other.isEncrypted) return false
         if (deliveryStatus != other.deliveryStatus) return false
-        if (isViewOnce != other.isViewOnce) return false
-        if (isViewOnceRead != other.isViewOnceRead) return false
 
         return true
     }
@@ -355,8 +338,6 @@ data class BitchatMessage(
         result = 31 * result + (encryptedContent?.contentHashCode() ?: 0)
         result = 31 * result + isEncrypted.hashCode()
         result = 31 * result + (deliveryStatus?.hashCode() ?: 0)
-        result = 31 * result + isViewOnce.hashCode()
-        result = 31 * result + isViewOnceRead.hashCode()
         return result
     }
 }

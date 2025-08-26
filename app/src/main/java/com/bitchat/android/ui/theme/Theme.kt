@@ -7,35 +7,31 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Modern color scheme with sophisticated blues and purples
+// Colors that match the iOS bitchat theme
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF6366F1),        // Modern indigo/purple
-    onPrimary = Color.White,
-    secondary = Color(0xFF8B5CF6),      // Purple accent
-    onSecondary = Color.White,
-    background = Color(0xFF0F172A),     // Deep slate background
-    onBackground = Color(0xFFE2E8F0),   // Light slate text
-    surface = Color(0xFF1E293B),        // Darker slate surface
-    onSurface = Color(0xFFE2E8F0),      // Light slate text
-    error = Color(0xFFEF4444),          // Modern red for errors
-    onError = Color.White,
-    tertiary = Color(0xFF06B6D4),       // Cyan accent for highlights
-    onTertiary = Color.White
+    primary = Color(0xFF39FF14),        // Bright green (terminal-like)
+    onPrimary = Color.Black,
+    secondary = Color(0xFF2ECB10),      // Darker green
+    onSecondary = Color.Black,
+    background = Color.Black,
+    onBackground = Color(0xFF39FF14),   // Green on black
+    surface = Color(0xFF111111),        // Very dark gray
+    onSurface = Color(0xFF39FF14),      // Green text
+    error = Color(0xFFFF5555),          // Red for errors
+    onError = Color.Black
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF4F46E5),        // Rich indigo
+    primary = Color(0xFF008000),        // Dark green
     onPrimary = Color.White,
-    secondary = Color(0xFF7C3AED),      // Rich purple
+    secondary = Color(0xFF006600),      // Even darker green
     onSecondary = Color.White,
-    background = Color(0xFFFCFDFE),     // Crisp white background
-    onBackground = Color(0xFF1E293B),   // Dark slate text
-    surface = Color(0xFFF8FAFC),        // Light slate surface
-    onSurface = Color(0xFF334155),      // Medium slate text
-    error = Color(0xFFDC2626),          // Modern red for errors
-    onError = Color.White,
-    tertiary = Color(0xFF0891B2),       // Cyan accent for highlights
-    onTertiary = Color.White
+    background = Color.White,
+    onBackground = Color(0xFF008000),   // Dark green on white
+    surface = Color(0xFFF8F8F8),        // Very light gray
+    onSurface = Color(0xFF008000),      // Dark green text
+    error = Color(0xFFCC0000),          // Dark red for errors
+    onError = Color.White
 )
 
 @Composable

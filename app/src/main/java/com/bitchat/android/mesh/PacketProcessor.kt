@@ -1,5 +1,6 @@
 package com.bitchat.android.mesh
 
+import android.content.Context
 import android.util.Log
 import com.bitchat.android.protocol.BitchatPacket
 import com.bitchat.android.protocol.MessageType
@@ -14,8 +15,14 @@ import kotlinx.coroutines.channels.actor
  * Per-peer packet serialization using Kotlin coroutine actors
  * Prevents race condition where multiple threads process packets
  * from the same peer simultaneously, causing session management conflicts.
+ * 
+ * Includes comprehensive anti-spam protection with rate limiting,
+ * warning system, and persistent mute tracking.
  */
-class PacketProcessor(private val myPeerID: String) {
+class PacketProcessor(
+    private val myPeerID: String,
+    private val context: Context
+) {
     
     companion object {
         private const val TAG = "PacketProcessor"
@@ -23,6 +30,27 @@ class PacketProcessor(private val myPeerID: String) {
     
     // Delegate for callbacks
     var delegate: PacketProcessorDelegate? = null
+    
+    // Anti-spam manager for comprehensive spam protection
+    private val antiSpamManager = AntiSpamManager(context, object : AntiSpamManagerDelegate {
+        override fun onSpamWarningIssued(peerID: String, warningCount: Int, reason: String) {
+            delegate?.onSpamWarningIssued(peerID, warningCount, reason)
+        }
+        
+        override fun onPeerMuted(peerID: String, muteUntil: Long, reason: String) {
+            delegate?.onPeerMuted(peerID, muteUntil, reason)
+        }
+        
+        override fun onPeerUnmuted(peerID: String) {
+            delegate?.onPeerUnmuted(peerID)
+        }
+        
+        override fun onWarningDecayed(peerID: String, remainingWarnings: Int) {
+            delegate?.onWarningDecayed(peerID, remainingWarnings)
+        }
+        
+        override fun getMyPeerID(): String = myPeerID
+    })
     
     // Helper function to format peer ID with nickname for logging
     private fun formatPeerForLog(peerID: String): String {
@@ -115,7 +143,7 @@ class PacketProcessor(private val myPeerID: String) {
     }
     
     /**
-     * Handle received packet - core protocol logic (exact same as iOS)
+     * Handle received packet - core protocol logic with anti-spam protection
      */
     private suspend fun handleReceivedPacket(routed: RoutedPacket) {
         val packet = routed.packet
@@ -125,6 +153,30 @@ class PacketProcessor(private val myPeerID: String) {
         if (!delegate?.validatePacketSecurity(packet, peerID)!!) {
             Log.d(TAG, "Packet failed security validation from ${formatPeerForLog(peerID)}")
             return
+        }
+        
+        // Anti-spam protection - check if packet should be blocked
+        val spamResult = antiSpamManager.checkPacketSpam(packet, peerID, routed.relayAddress)
+        when (spamResult) {
+            SpamCheckResult.BLOCKED_RATE_LIMIT -> {
+                Log.w(TAG, "Packet blocked due to rate limit from ${formatPeerForLog(peerID)}")
+                return
+            }
+            SpamCheckResult.BLOCKED_CONTENT_SPAM -> {
+                Log.w(TAG, "Packet blocked due to content spam from ${formatPeerForLog(peerID)}")
+                return
+            }
+            SpamCheckResult.BLOCKED_MUTED -> {
+                Log.d(TAG, "Packet blocked from muted peer ${formatPeerForLog(peerID)}")
+                return
+            }
+            SpamCheckResult.BLOCKED_IP_LIMIT -> {
+                Log.w(TAG, "Packet blocked due to IP rate limit from ${formatPeerForLog(peerID)}")
+                return
+            }
+            SpamCheckResult.ALLOWED -> {
+                // Continue processing
+            }
         }
 
         var validPacket = true
@@ -253,6 +305,20 @@ class PacketProcessor(private val myPeerID: String) {
     }
     
     /**
+     * Get anti-spam debug information
+     */
+    fun getAntiSpamDebugInfo(): String {
+        return antiSpamManager.getDebugInfo()
+    }
+    
+    /**
+     * Check if a peer is currently muted by anti-spam system
+     */
+    fun isPeerMuted(peerID: String): Boolean {
+        return antiSpamManager.isPeerMuted(peerID)
+    }
+    
+    /**
      * Shutdown the processor and all peer actors
      */
     fun shutdown() {
@@ -266,6 +332,9 @@ class PacketProcessor(private val myPeerID: String) {
         
         // Shutdown the relay manager
         packetRelayManager.shutdown()
+        
+        // Shutdown the anti-spam manager
+        antiSpamManager.shutdown()
         
         // Cancel the main scope
         processorScope.cancel()
@@ -301,4 +370,25 @@ interface PacketProcessorDelegate {
     fun sendAnnouncementToPeer(peerID: String)
     fun sendCachedMessages(peerID: String)
     fun relayPacket(routed: RoutedPacket)
+    
+    // Anti-spam callbacks
+    /**
+     * Called when a spam warning is issued to a peer
+     */
+    fun onSpamWarningIssued(peerID: String, warningCount: Int, reason: String)
+    
+    /**
+     * Called when a peer is muted for spam
+     */
+    fun onPeerMuted(peerID: String, muteUntil: Long, reason: String)
+    
+    /**
+     * Called when a peer is unmuted
+     */
+    fun onPeerUnmuted(peerID: String)
+    
+    /**
+     * Called when a warning decays due to good behavior
+     */
+    fun onWarningDecayed(peerID: String, remainingWarnings: Int)
 }
