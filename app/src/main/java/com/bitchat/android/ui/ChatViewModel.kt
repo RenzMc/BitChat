@@ -386,25 +386,27 @@ class ChatViewModel(
         }
     }
     
-    // Basic rate limiting at UI level (additional protection)
+    // Lightweight rate limiting at UI level (user-friendly protection)
     private var lastMessageTime = 0L
     private var messageCount = 0
-    private val MESSAGE_INTERVAL_MS = 2000L // 2 seconds between messages (UI level protection) 
-    private val BURST_LIMIT = 4 // Allow 4 messages in quick succession
+    private val MESSAGE_INTERVAL_MS = 500L // 0.5 seconds between messages (much more user-friendly) 
+    private val BURST_LIMIT = 10 // Allow 10 messages in quick succession (normal conversation)
     
     /**
-     * Check if user can send message now (UI level rate limiting)
+     * Check if user can send message now (UI level rate limiting - very lenient)
+     * Only blocks extremely rapid automated sending, allows normal conversation
      */
     private fun canSendMessageNow(): Boolean {
         val currentTime = System.currentTimeMillis()
         
-        // Reset count if enough time has passed
-        if (currentTime - lastMessageTime > MESSAGE_INTERVAL_MS * 2) {
+        // Reset count if enough time has passed (2 seconds reset window)
+        if (currentTime - lastMessageTime > MESSAGE_INTERVAL_MS * 4) {
             messageCount = 0
         }
         
-        // Check if within burst limit
+        // Only block if user is sending VERY rapidly (more than 10 messages in 0.5 sec intervals)
         if (messageCount >= BURST_LIMIT && currentTime - lastMessageTime < MESSAGE_INTERVAL_MS) {
+            Log.d("ChatViewModel", "UI rate limit hit: ${messageCount} messages in rapid succession")
             return false
         }
         

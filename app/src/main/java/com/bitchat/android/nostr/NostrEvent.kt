@@ -30,7 +30,14 @@ data class NostrEvent(
                     pubkey = json["pubkey"] as? String ?: return null,
                     createdAt = (json["created_at"] as? Number)?.toInt() ?: return null,
                     kind = (json["kind"] as? Number)?.toInt() ?: return null,
-                    tags = (json["tags"] as? List<List<String>>) ?: return null,
+                    tags = (json["tags"] as? List<*>)?.let { tagsList ->
+                        try {
+                            @Suppress("UNCHECKED_CAST")
+                            tagsList as List<List<String>>
+                        } catch (e: ClassCastException) {
+                            emptyList()
+                        }
+                    } ?: emptyList(),
                     content = json["content"] as? String ?: return null,
                     sig = json["sig"] as? String?
                 )

@@ -261,6 +261,7 @@ class BluetoothPacketBroadcaster(
         return buildString {
             appendLine("=== Packet Broadcaster Debug Info ===")
             appendLine("Broadcaster Scope Active: ${broadcasterScope.isActive}")
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             appendLine("Actor Channel Closed: ${broadcasterActor.isClosedForSend}")
             appendLine("Connection Scope Active: ${connectionScope.isActive}")
         }
